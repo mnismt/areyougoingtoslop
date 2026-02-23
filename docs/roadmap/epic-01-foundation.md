@@ -13,11 +13,11 @@ Prepare stable dev baseline and project conventions.
 
 ## Tasks
 - [x] Initialize Next.js app (App Router + TS + Tailwind)
-- [ ] Add project scripts: `lint`, `typecheck`, `test`, `format`
-- [ ] Set up formatter/lint rules (Prettier optional)
-- [ ] Create `.env.example` with required variables
-- [ ] Add docs structure index
-- [ ] Define folder conventions (`src/lib`, `src/server`, `src/features`)
+- [x] Add project scripts: `lint`, `typecheck`, `test`, `format`
+- [x] Set up formatter/lint rules (Prettier optional)
+- [x] Create `.env.example` with required variables
+- [x] Add docs structure index
+- [x] Define folder conventions (`src/lib`, `src/server`, `src/features`)
 
 ## Dependencies
 None.
