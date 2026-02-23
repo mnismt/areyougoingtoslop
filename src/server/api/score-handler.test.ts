@@ -1,10 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { createScoreHandler } from "../../../../server/api/score-handler";
-import { GitHubRateLimitError } from "../../../../server/github";
+import { createScoreHandler } from "./score-handler";
+import { GitHubRateLimitError } from "../github";
 
-describe("GET /api/score/:username", () => {
+describe("score handler", () => {
   it("returns score payload on success", async () => {
     const handler = createScoreHandler(async () => ({
       slop_score: 42,
@@ -54,3 +54,4 @@ describe("GET /api/score/:username", () => {
     assert.equal(body.error, "rate_limited");
   });
 });
+

@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0a08;
+  --foreground: #f7f1e6;
+  --muted: #b7ada0;
+  --accent: #f15a29;
+  --accent-soft: #ffe0c2;
+  --card: #15120f;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
+    "Spectral", serif;
+  --font-mono: "SFMono-Regular", "Menlo", "Monaco", "Consolas",
+    "Liberation Mono", monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow {
+  0% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-slow {
+  animation: rise 1s ease-out both;
+}
+
+.animate-delay-1 {
+  animation-delay: 120ms;
+}
+
+.animate-delay-2 {
+  animation-delay: 240ms;
+}
+
+.animate-delay-3 {
+  animation-delay: 360ms;
+}
+
+.glow-pulse {
+  animation: glow 3.4s ease-in-out infinite;
 }
