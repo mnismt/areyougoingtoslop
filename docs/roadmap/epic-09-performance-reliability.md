@@ -13,11 +13,11 @@ Keep the app fast under real usage and resilient to API limits.
 - Advanced distributed systems optimization
 
 ## Tasks
-- [ ] Add cache strategy (in-memory or Redis)
-- [ ] Define cache TTL (start with 12h, tune later)
-- [ ] Add server-side logging/telemetry
-- [ ] Add request throttling/IP rate limit
-- [ ] Benchmark p95 response time and optimize bottlenecks
+- [x] Add cache strategy (in-memory or Redis)
+- [x] Define cache TTL (start with 12h, tune later)
+- [x] Add server-side logging/telemetry
+- [x] Add request throttling/IP rate limit
+- [x] Benchmark p95 response time and optimize bottlenecks
 
 ## Dependencies
 - Score API and ingestion behavior stabilized.
