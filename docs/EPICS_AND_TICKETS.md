@@ -1,5 +1,9 @@
 # areyougoingslop — Epics → Tasks (MVP Breakdown)
 
+> Note: Active planning has been split into per-epic files in `docs/roadmap/`.
+> This file is kept as a consolidated snapshot.
+
+
 ## Planning Notes
 - Scope locked to **user-level scoring only** for MVP.
 - Analyze **public GitHub data only**.
