@@ -1,5 +1,7 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
+import ShareActions from "./ShareActions";
 
 type ScoreResponse = {
   slop_score: number;
@@ -21,6 +23,36 @@ const fetchScore = async (username: string) => {
     ok: response.ok,
     status: response.status,
     payload,
+  };
+};
+
+export const generateMetadata = async ({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> => {
+  const { username } = await params;
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") ?? "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  const title = `@${username} | areyougoingslop`;
+  const description =
+    "A playful, transparent heuristic for how AI-assisted a GitHub user's public contributions look.";
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${protocol}://${host}/u/${username}`,
+      images: [`/api/og/${username}`],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [`/api/og/${username}`],
+    },
   };
 };
 
@@ -127,7 +159,10 @@ export default async function UserScorePage({
           ← back
         </Link>
 
-        <section className="flex flex-col gap-8 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur animate-rise">
+        <section
+          id="share-card"
+          className="flex flex-col gap-8 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur animate-rise"
+        >
           <div className="flex flex-col gap-3">
             <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
               @{username}
@@ -160,6 +195,7 @@ export default async function UserScorePage({
                   public commits.
                 </div>
               ) : null}
+              <ShareActions username={username} />
             </div>
           </div>
         </section>

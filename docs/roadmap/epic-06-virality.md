@@ -12,10 +12,10 @@ Make results easy to share and optimized for social spread.
 - Ranking logic and leaderboard growth mechanics
 
 ## Tasks
-- [ ] Generate dynamic OG image from result payload
-- [ ] Add share CTA (copy link / download card)
-- [ ] Ensure score page metadata is social-preview ready
-- [ ] Add screenshot-friendly result layout
+- [x] Generate dynamic OG image from result payload
+- [x] Add share CTA (copy link / download card)
+- [x] Ensure score page metadata is social-preview ready
+- [x] Add screenshot-friendly result layout
 
 ## Dependencies
 - Epic 05 completed result view.
