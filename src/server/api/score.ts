@@ -11,12 +11,12 @@ export const scoreUser = async (
   username: string,
   options: ScoreUserOptions = {},
 ): Promise<SlopScoreResult> => {
+  const effectiveNow = options.now ?? new Date();
   const events = await fetchUserActivity(username, {
     token: options.token,
     fetcher: options.fetcher,
-    now: options.now,
+    now: effectiveNow,
   });
 
-  return computeSlopScore(events, undefined, options.now);
+  return computeSlopScore(events, undefined, effectiveNow);
 };
-

@@ -6,13 +6,16 @@ import { GitHubRateLimitError } from "../github";
 
 describe("score handler", () => {
   it("returns score payload on success", async () => {
-    const handler = createScoreHandler(async () => ({
-      slop_score: 42,
-      tier: "The LLM Diplomat",
-      confidence: "medium",
-      top_signals: ["Commit messages mention AI tools"],
-      scoring_window: "last 180 days",
-    }));
+    const handler = createScoreHandler(
+      async () => ({
+        slop_score: 42,
+        tier: "The LLM Diplomat",
+        confidence: "medium",
+        top_signals: ["Commit messages mention AI tools"],
+        scoring_window: "last 180 days",
+      }),
+      { recordLeaderboard: false },
+    );
 
     const response = await handler(new NextRequest("http://localhost"), {
       params: Promise.resolve({ username: "octocat" }),
@@ -25,13 +28,16 @@ describe("score handler", () => {
   });
 
   it("rejects invalid usernames", async () => {
-    const handler = createScoreHandler(async () => ({
-      slop_score: 0,
-      tier: "The Artisanal Masochist",
-      confidence: "low",
-      top_signals: ["Low signal density in the recent activity window"],
-      scoring_window: "last 180 days",
-    }));
+    const handler = createScoreHandler(
+      async () => ({
+        slop_score: 0,
+        tier: "The Artisanal Masochist",
+        confidence: "low",
+        top_signals: ["Low signal density in the recent activity window"],
+        scoring_window: "last 180 days",
+      }),
+      { recordLeaderboard: false },
+    );
 
     const response = await handler(new NextRequest("http://localhost"), {
       params: Promise.resolve({ username: "bad--name" }),
@@ -41,9 +47,15 @@ describe("score handler", () => {
   });
 
   it("maps rate limit errors to 429", async () => {
-    const handler = createScoreHandler(async () => {
-      throw new GitHubRateLimitError("rate limited", "2026-02-23T00:00:00.000Z");
-    });
+    const handler = createScoreHandler(
+      async () => {
+        throw new GitHubRateLimitError(
+          "rate limited",
+          "2026-02-23T00:00:00.000Z",
+        );
+      },
+      { recordLeaderboard: false },
+    );
 
     const response = await handler(new NextRequest("http://localhost"), {
       params: Promise.resolve({ username: "octocat" }),
@@ -54,4 +66,3 @@ describe("score handler", () => {
     assert.equal(body.error, "rate_limited");
   });
 });
-

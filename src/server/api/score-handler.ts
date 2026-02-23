@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scoreUser } from "./score";
+import { upsertLeaderboardEntry } from "../leaderboard";
 import {
   GitHubNotFoundError,
   GitHubRateLimitError,
@@ -12,8 +13,15 @@ export type ScoreHandler = (
   context: { params: Promise<{ username: string }> },
 ) => Promise<NextResponse>;
 
+export type ScoreHandlerOptions = {
+  recordLeaderboard?: boolean;
+};
+
 export const createScoreHandler =
-  (scorer: typeof scoreUser = scoreUser): ScoreHandler =>
+  (
+    scorer: typeof scoreUser = scoreUser,
+    options: ScoreHandlerOptions = {},
+  ): ScoreHandler =>
   async (_request, context) => {
     const { username } = await context.params;
     if (!isValidGitHubUsername(username)) {
@@ -25,6 +33,15 @@ export const createScoreHandler =
 
     try {
       const result = await scorer(username);
+      if (options.recordLeaderboard !== false) {
+        await upsertLeaderboardEntry({
+          username,
+          slop_score: result.slop_score,
+          tier: result.tier,
+          confidence: result.confidence,
+          last_scored_at: new Date().toISOString(),
+        });
+      }
       return NextResponse.json(result, { status: 200 });
     } catch (error) {
       if (error instanceof GitHubNotFoundError) {
@@ -58,4 +75,3 @@ export const createScoreHandler =
       );
     }
   };
-

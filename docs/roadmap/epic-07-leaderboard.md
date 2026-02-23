@@ -12,12 +12,12 @@ Create public discovery surface for top slop scores.
 - Private/opt-in modes for MVP
 
 ## Tasks
-- [ ] Define leaderboard data model
-- [ ] Add persistence for recent scored users
-- [ ] Rank by slop score (with confidence floor)
-- [ ] Build `/leaderboard` page
-- [ ] Show last-updated timestamp per user
-- [ ] Add abuse guardrails (basic spam protection)
+- [x] Define leaderboard data model
+- [x] Add persistence for recent scored users
+- [x] Rank by slop score (with confidence floor)
+- [x] Build `/leaderboard` page
+- [x] Show last-updated timestamp per user
+- [x] Add abuse guardrails (basic spam protection)
 
 ## Dependencies
 - Epic 04 API and Epic 05 result flow.

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import UsernameForm from "./components/UsernameForm";
 
 export default function Home() {
@@ -9,9 +10,12 @@ export default function Home() {
       <main className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-16 px-6 py-16">
         <header className="flex flex-col gap-6 text-sm uppercase tracking-[0.3em] text-[var(--muted)] md:flex-row md:items-center md:justify-between">
           <span>areyougoingslop</span>
-          <span className="rounded-full border border-white/10 px-4 py-2 text-xs">
+          <Link
+            href="/leaderboard"
+            className="rounded-full border border-white/10 px-4 py-2 text-xs transition hover:border-white/40 hover:text-white"
+          >
             public leaderboard: on
-          </span>
+          </Link>
         </header>
 
         <section className="grid gap-12 md:grid-cols-[1.2fr_0.8fr]">
