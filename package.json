@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests specified\"",
+    "test": "tsc -p tsconfig.test.json && node --test .test-build",
     "format": "eslint --fix"
   },
   "dependencies": {
