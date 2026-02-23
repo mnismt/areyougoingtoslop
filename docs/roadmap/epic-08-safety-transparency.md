@@ -12,11 +12,11 @@ Keep the product fun without misleading claims.
 - Full legal framework beyond MVP launch needs
 
 ## Tasks
-- [ ] Add prominent heuristic/satire disclaimer on results
-- [ ] Create "How scoring works" page
-- [ ] Add confidence meaning tooltip/copy
-- [ ] Add Terms/Privacy minimal pages for launch
-- [ ] Define policy for username removal/hide request (optional post-MVP)
+- [x] Add prominent heuristic/satire disclaimer on results
+- [x] Create "How scoring works" page
+- [x] Add confidence meaning tooltip/copy
+- [x] Add Terms/Privacy minimal pages for launch
+- [x] Define policy for username removal/hide request (optional post-MVP)
 
 ## Dependencies
 - Epic 03 scoring logic and confidence framework.

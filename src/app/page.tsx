@@ -72,8 +72,19 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-          Built for screenshots, not courtrooms.
+        <footer className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+          <span>Built for screenshots, not courtrooms.</span>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/how-it-works" className="hover:text-white">
+              How scoring works
+            </Link>
+            <Link href="/terms" className="hover:text-white">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-white">
+              Privacy
+            </Link>
+          </div>
         </footer>
       </main>
     </div>

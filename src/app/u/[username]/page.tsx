@@ -185,10 +185,18 @@ export default async function UserScorePage({
                   {data.scoring_window}
                 </span>
               </div>
+              <p className="text-xs text-white/50">
+                Confidence reflects the volume of recent public activity and the
+                amount of commit stats we can verify.
+              </p>
               <p className="text-sm text-white/70">
                 We rank the surface-level signals in public activity. The score
                 is a playful heuristic, not a definitive detector.
               </p>
+              <div className="rounded-2xl border border-[#f15a2933] bg-[#f15a2914] p-4 text-xs uppercase tracking-[0.2em] text-[#f15a29]">
+                Satirical heuristic, not proof. Roast the behavior, not the
+                person.
+              </div>
               {hasLowSignal ? (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
                   Not enough recent activity to lean on. Try again after a few
@@ -211,8 +219,19 @@ export default async function UserScorePage({
           ))}
         </section>
 
-        <footer className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-          Satirical heuristic. Roast the code, not the coder.
+        <footer className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+          <span>Satirical heuristic. Roast the code, not the coder.</span>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/how-it-works" className="hover:text-white">
+              How scoring works
+            </Link>
+            <Link href="/terms" className="hover:text-white">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-white">
+              Privacy
+            </Link>
+          </div>
         </footer>
       </main>
     </div>

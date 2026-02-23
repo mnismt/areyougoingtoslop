@@ -95,8 +95,19 @@ export default async function LeaderboardPage() {
           )}
         </section>
 
-        <footer className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-          Satirical heuristic. Roast the code, not the coder.
+        <footer className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+          <span>Satirical heuristic. Roast the code, not the coder.</span>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/how-it-works" className="hover:text-white">
+              How scoring works
+            </Link>
+            <Link href="/terms" className="hover:text-white">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-white">
+              Privacy
+            </Link>
+          </div>
         </footer>
       </main>
     </div>
