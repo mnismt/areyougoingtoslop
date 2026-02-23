@@ -43,6 +43,9 @@ export default function TermsPage() {
             <Link href="/privacy" className="hover:text-white">
               Privacy
             </Link>
+            <Link href="/feedback" className="hover:text-white">
+              Feedback
+            </Link>
             <Link href="/how-it-works" className="hover:text-white">
               How scoring works
             </Link>

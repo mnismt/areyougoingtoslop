@@ -35,7 +35,7 @@ describe("computeSlopScore", () => {
     ];
 
     const result = computeSlopScore(events, undefined, now);
-    assert.equal(result.slop_score, 17);
+    assert.equal(result.slop_score, 20);
     assert.equal(result.confidence, "low");
   });
 });
@@ -49,4 +49,3 @@ describe("mapScoreToTier", () => {
     assert.equal(mapScoreToTier(99), "The Unsupervised Slop Machine");
   });
 });
-

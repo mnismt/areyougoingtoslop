@@ -1,0 +1,52 @@
+[
+  {
+    "id": "explicit-ai-mentions",
+    "summary": "Recent commits explicitly mention AI tools like Copilot or ChatGPT.",
+    "expected": {
+      "min_score": 55,
+      "tier": "The Agent Supervisor",
+      "confidence": "medium"
+    },
+    "notes": "Explicit mentions should dominate the score."
+  },
+  {
+    "id": "high-churn-rewrites",
+    "summary": "Large additions and deletions over short windows with generic messages.",
+    "expected": {
+      "min_score": 40,
+      "tier": "The LLM Diplomat",
+      "confidence": "medium"
+    },
+    "notes": "Churn and apathy signals should lift the score but not max it out."
+  },
+  {
+    "id": "steady-human-craft",
+    "summary": "Small, consistent commits with descriptive messages and low churn.",
+    "expected": {
+      "max_score": 20,
+      "tier": "The Tab-Key Athlete",
+      "confidence": "high"
+    },
+    "notes": "Should remain low-slop despite volume."
+  },
+  {
+    "id": "sparse-activity",
+    "summary": "Very few commits in the last 180 days, no AI mentions.",
+    "expected": {
+      "max_score": 15,
+      "tier": "The Artisanal Masochist",
+      "confidence": "low"
+    },
+    "notes": "Low confidence and low score."
+  },
+  {
+    "id": "prompt-crumbs",
+    "summary": "Commit messages contain prompt-like artifacts or assistant phrasing.",
+    "expected": {
+      "min_score": 45,
+      "tier": "The LLM Diplomat",
+      "confidence": "medium"
+    },
+    "notes": "Prompt crumbs should score above neutral."
+  }
+]

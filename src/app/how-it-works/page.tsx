@@ -74,6 +74,9 @@ export default function HowItWorksPage() {
         <footer className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
           <span>Built for screenshots, not courtrooms.</span>
           <div className="flex flex-wrap gap-4">
+            <Link href="/feedback" className="hover:text-white">
+              Feedback
+            </Link>
             <Link href="/terms" className="hover:text-white">
               Terms
             </Link>

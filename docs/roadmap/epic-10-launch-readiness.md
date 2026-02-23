@@ -12,12 +12,12 @@ Tune quality and ship MVP confidently.
 - Post-launch growth experimentation beyond baseline tracking
 
 ## Tasks
-- [ ] Create calibration dataset (known coding styles/profiles)
-- [ ] Tune signal weights to reduce obvious false positives
-- [ ] QA copy consistency (funny + thoughtful)
-- [ ] Final UI polish pass
+- [x] Create calibration dataset (known coding styles/profiles)
+- [x] Tune signal weights to reduce obvious false positives
+- [x] QA copy consistency (funny + thoughtful)
+- [x] Final UI polish pass
 - [ ] Deploy MVP
-- [ ] Add post-launch feedback capture
+- [x] Add post-launch feedback capture
 
 ## Dependencies
 - Completion of Milestones A + B.

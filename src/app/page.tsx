@@ -78,6 +78,9 @@ export default function Home() {
             <Link href="/how-it-works" className="hover:text-white">
               How scoring works
             </Link>
+            <Link href="/feedback" className="hover:text-white">
+              Feedback
+            </Link>
             <Link href="/terms" className="hover:text-white">
               Terms
             </Link>
