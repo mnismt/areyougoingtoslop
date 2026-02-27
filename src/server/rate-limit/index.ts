@@ -1,2 +1,2 @@
-export { MemoryRateLimiter } from "./memory";
-export type { RateLimitResult, RateLimiterOptions } from "./memory";
+export type { RateLimiterOptions, RateLimitResult } from './memory'
+export { MemoryRateLimiter } from './memory'

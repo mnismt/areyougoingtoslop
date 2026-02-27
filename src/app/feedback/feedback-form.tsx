@@ -1,36 +1,36 @@
-"use client";
+'use client'
 
-import { useState } from "react";
+import { useState } from 'react'
 
 export default function FeedbackForm() {
-  const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
-    "idle",
-  );
+  const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>(
+    'idle',
+  )
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+    event.preventDefault()
     if (!message.trim()) {
-      setStatus("error");
-      return;
+      setStatus('error')
+      return
     }
-    setStatus("sending");
+    setStatus('sending')
     try {
-      const response = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
-      });
+      })
       if (!response.ok) {
-        throw new Error("Failed");
+        throw new Error('Failed')
       }
-      setMessage("");
-      setStatus("sent");
-      setTimeout(() => setStatus("idle"), 2000);
+      setMessage('')
+      setStatus('sent')
+      setTimeout(() => setStatus('idle'), 2000)
     } catch {
-      setStatus("error");
+      setStatus('error')
     }
-  };
+  }
 
   return (
     <form
@@ -51,17 +51,17 @@ export default function FeedbackForm() {
         type="submit"
         className="h-11 rounded-xl bg-[var(--accent)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
       >
-        {status === "sending"
-          ? "Sending..."
-          : status === "sent"
-            ? "Thanks!"
-            : "Send feedback"}
+        {status === 'sending'
+          ? 'Sending...'
+          : status === 'sent'
+            ? 'Thanks!'
+            : 'Send feedback'}
       </button>
-      {status === "error" ? (
+      {status === 'error' ? (
         <p className="text-xs text-[var(--accent)]">
           Something went wrong. Try again.
         </p>
       ) : null}
     </form>
-  );
+  )
 }

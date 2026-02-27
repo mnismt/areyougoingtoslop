@@ -1,25 +1,25 @@
 export type SignalKey =
-  | "ai_keywords"
-  | "prompt_crumbs"
-  | "velocity_volume"
-  | "apathy_ratio"
-  | "churn";
+  | 'ai_keywords'
+  | 'prompt_crumbs'
+  | 'velocity_volume'
+  | 'apathy_ratio'
+  | 'churn'
 
-export type ScoringWeights = Record<SignalKey, number>;
+export type ScoringWeights = Record<SignalKey, number>
 
 export type ScoringConfig = {
-  weights: ScoringWeights;
+  weights: ScoringWeights
   recencyBuckets: {
-    days: number;
-    weight: number;
-  }[];
+    days: number
+    weight: number
+  }[]
   thresholds: {
-    largeChange: number;
-    churnAdditions: number;
-    churnDeletions: number;
-    velocitySpike: number;
-  };
-};
+    largeChange: number
+    churnAdditions: number
+    churnDeletions: number
+    velocitySpike: number
+  }
+}
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   weights: {
@@ -40,4 +40,4 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     churnDeletions: 350,
     velocitySpike: 800,
   },
-};
+}

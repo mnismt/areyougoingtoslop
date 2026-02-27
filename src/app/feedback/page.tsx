@@ -1,5 +1,5 @@
-import Link from "next/link";
-import FeedbackForm from "./feedback-form";
+import Link from 'next/link'
+import FeedbackForm from './feedback-form'
 
 export default function FeedbackPage() {
   return (
@@ -17,8 +17,8 @@ export default function FeedbackPage() {
           Help us tune the roast.
         </h1>
         <p className="text-sm text-[var(--muted)]">
-          We are calibrating the model. Tell us what feels off, what is spot
-          on, and what to improve next.
+          We are calibrating the model. Tell us what feels off, what is spot on,
+          and what to improve next.
         </p>
       </header>
 
@@ -41,5 +41,5 @@ export default function FeedbackPage() {
         </div>
       </footer>
     </main>
-  );
+  )
 }

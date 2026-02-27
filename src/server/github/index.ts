@@ -3,7 +3,7 @@ export {
   GitHubNotFoundError,
   GitHubRateLimitError,
   GitHubValidationError,
-} from "./errors";
-export { fetchUserActivity } from "./ingestion";
-export { isValidGitHubUsername } from "./validation";
-export type { GitHubCommit, GitHubEvent, GitHubUser } from "./types";
+} from './errors'
+export { fetchUserActivity } from './ingestion'
+export type { GitHubCommit, GitHubEvent, GitHubUser } from './types'
+export { isValidGitHubUsername } from './validation'

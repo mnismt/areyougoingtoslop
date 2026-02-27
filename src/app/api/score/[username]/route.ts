@@ -1,3 +1,3 @@
-import { createScoreHandler } from "../../../../server/api/score-handler";
+import { createScoreHandler } from '../../../../server/api/score-handler'
 
-export const GET = createScoreHandler();
+export const GET = createScoreHandler()

@@ -1,16 +1,16 @@
-import Image from "next/image";
-import Link from "next/link";
-import UsernameForm from "./components/username-form";
-import { getLeaderboard } from "../server/leaderboard";
+import Image from 'next/image'
+import Link from 'next/link'
+import { getLeaderboard } from '../server/leaderboard'
+import UsernameForm from './components/username-form'
 
 const scoreColor = (score: number) => {
-  if (score <= 30) return "score-low";
-  if (score <= 70) return "score-mid";
-  return "score-high";
-};
+  if (score <= 30) return 'score-low'
+  if (score <= 70) return 'score-mid'
+  return 'score-high'
+}
 
 export default async function Home() {
-  const leaderboard = await getLeaderboard({ limit: 6 });
+  const leaderboard = await getLeaderboard({ limit: 6 })
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-16 px-6 py-16">
@@ -60,7 +60,9 @@ export default async function Home() {
                     {entry.tier}
                   </span>
                 </div>
-                <span className={`font-mono text-lg font-bold ${scoreColor(entry.slop_score)}`}>
+                <span
+                  className={`font-mono text-lg font-bold ${scoreColor(entry.slop_score)}`}
+                >
                   {entry.slop_score}
                 </span>
               </Link>
@@ -87,5 +89,5 @@ export default async function Home() {
         </div>
       </footer>
     </main>
-  );
+  )
 }

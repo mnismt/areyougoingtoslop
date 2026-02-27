@@ -21,6 +21,7 @@ Build **areyougoingslop**: a humorous, transparent heuristic app that scores how
 - Planning: `docs/roadmap/README.md` + `docs/roadmap/epic-*.md`
 
 ## Engineering Rules
+- Always use **bun** as the package manager (e.g., `bun install`, `bun add`, `bun run`). Do not use npm/yarn/pnpm.
 - Keep changes scoped to requested task/epic.
 - Prefer small, reviewable commits.
 - Do not silently change product scope.

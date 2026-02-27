@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link'
 
 export default function HowItWorksPage() {
   return (
@@ -48,8 +48,8 @@ export default function HowItWorksPage() {
           <h2 className="text-lg font-semibold">Confidence</h2>
           <p className="mt-4 text-sm text-[var(--muted)]">
             Confidence reflects how much recent public data we have and how
-            complete the commit stats look. Low confidence means the score is
-            a softer guess.
+            complete the commit stats look. Low confidence means the score is a
+            softer guess.
           </p>
         </div>
 
@@ -59,9 +59,7 @@ export default function HowItWorksPage() {
       </section>
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-        <h2 className="text-lg font-semibold">
-          Removal and hide requests
-        </h2>
+        <h2 className="text-lg font-semibold">Removal and hide requests</h2>
         <p className="mt-4 text-sm text-[var(--muted)]">
           Post-MVP we plan to add a self-serve removal or hide request flow.
           Until then, contact the maintainers for takedown requests and we will
@@ -84,5 +82,5 @@ export default function HowItWorksPage() {
         </div>
       </footer>
     </main>
-  );
+  )
 }

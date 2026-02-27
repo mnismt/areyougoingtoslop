@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link'
 
 export default function PrivacyPage() {
   return (
@@ -51,5 +51,5 @@ export default function PrivacyPage() {
         </div>
       </footer>
     </main>
-  );
+  )
 }

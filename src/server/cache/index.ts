@@ -1,1 +1,1 @@
-export { getCachedScore, setCachedScore, clearScoreCache } from "./score-cache";
+export { clearScoreCache, getCachedScore, setCachedScore } from './score-cache'

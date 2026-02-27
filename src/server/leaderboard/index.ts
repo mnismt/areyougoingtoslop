@@ -1,2 +1,2 @@
-export { getLeaderboard, upsertLeaderboardEntry } from "./store";
-export type { LeaderboardEntry } from "./types";
+export { getLeaderboard, upsertLeaderboardEntry } from './store'
+export type { LeaderboardEntry } from './types'

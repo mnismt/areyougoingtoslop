@@ -1,45 +1,44 @@
 export type GitHubUser = {
-  login: string;
-  id: number;
-  type: string;
-};
+  login: string
+  id: number
+  type: string
+}
 
 export type GitHubEventRepo = {
-  name: string;
-};
+  name: string
+}
 
 export type GitHubEvent = {
-  id: string;
-  type: string;
-  repo: GitHubEventRepo;
-  created_at: string;
+  id: string
+  type: string
+  repo: GitHubEventRepo
+  created_at: string
   payload: {
     commits?: Array<{
-      sha: string;
-      message: string;
-    }>;
-    ref?: string;
-    size?: number;
-  };
-};
+      sha: string
+      message: string
+    }>
+    ref?: string
+    size?: number
+  }
+}
 
 export type GitHubCommitFile = {
-  filename: string;
-};
+  filename: string
+}
 
 export type GitHubCommit = {
-  sha: string;
+  sha: string
   commit: {
-    message: string;
+    message: string
     author?: {
-      date?: string;
-    };
-  };
+      date?: string
+    }
+  }
   stats?: {
-    additions: number;
-    deletions: number;
-    total: number;
-  };
-  files?: GitHubCommitFile[];
-};
-
+    additions: number
+    deletions: number
+    total: number
+  }
+  files?: GitHubCommitFile[]
+}

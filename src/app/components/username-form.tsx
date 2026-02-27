@@ -1,26 +1,25 @@
-"use client";
+'use client'
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
-const sanitizeUsername = (value: string) =>
-  value.trim().replace(/^@+/, "");
+const sanitizeUsername = (value: string) => value.trim().replace(/^@+/, '')
 
 export default function UsernameForm() {
-  const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [error, setError] = useState("");
+  const router = useRouter()
+  const [username, setUsername] = useState('')
+  const [error, setError] = useState('')
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const cleaned = sanitizeUsername(username);
+    event.preventDefault()
+    const cleaned = sanitizeUsername(username)
     if (!cleaned) {
-      setError("Drop a GitHub username and we'll do the rest.");
-      return;
+      setError("Drop a GitHub username and we'll do the rest.")
+      return
     }
-    setError("");
-    router.push(`/u/${cleaned}`);
-  };
+    setError('')
+    router.push(`/u/${cleaned}`)
+  }
 
   return (
     <form
@@ -44,9 +43,7 @@ export default function UsernameForm() {
           Score me
         </button>
       </div>
-      {error ? (
-        <p className="text-sm text-[var(--accent)]">{error}</p>
-      ) : null}
+      {error ? <p className="text-sm text-[var(--accent)]">{error}</p> : null}
     </form>
-  );
+  )
 }

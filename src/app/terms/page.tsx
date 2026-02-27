@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link'
 
 export default function TermsPage() {
   return (
@@ -19,8 +19,8 @@ export default function TermsPage() {
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-sm text-[var(--muted)]">
         <p>
-          areyougoingslop provides a satirical, heuristic score based on
-          public GitHub activity. It is not a detector, proof, or professional
+          areyougoingslop provides a satirical, heuristic score based on public
+          GitHub activity. It is not a detector, proof, or professional
           analysis.
         </p>
         <p className="mt-4">
@@ -48,5 +48,5 @@ export default function TermsPage() {
         </div>
       </footer>
     </main>
-  );
+  )
 }

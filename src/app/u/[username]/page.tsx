@@ -1,45 +1,45 @@
-import Image from "next/image";
-import Link from "next/link";
-import type { Metadata } from "next";
-import { headers } from "next/headers";
-import ShareActions from "./share-actions";
-import SlopGauge from "../../components/slop-gauge";
+import type { Metadata } from 'next'
+import { headers } from 'next/headers'
+import Image from 'next/image'
+import Link from 'next/link'
+import SlopGauge from '../../components/slop-gauge'
+import ShareActions from './share-actions'
 
 type ScoreResponse = {
-  slop_score: number;
-  tier: string;
-  confidence: "low" | "medium" | "high";
-  top_signals: string[];
-  scoring_window: string;
-};
+  slop_score: number
+  tier: string
+  confidence: 'low' | 'medium' | 'high'
+  top_signals: string[]
+  scoring_window: string
+}
 
 const fetchScore = async (username: string) => {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
+  const requestHeaders = await headers()
+  const host = requestHeaders.get('host') ?? 'localhost:3000'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
   const response = await fetch(`${protocol}://${host}/api/score/${username}`, {
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => null);
+    cache: 'no-store',
+  })
+  const payload = await response.json().catch(() => null)
   return {
     ok: response.ok,
     status: response.status,
     payload,
-  };
-};
+  }
+}
 
 export const generateMetadata = async ({
   params,
 }: {
-  params: Promise<{ username: string }>;
+  params: Promise<{ username: string }>
 }): Promise<Metadata> => {
-  const { username } = await params;
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const title = `@${username} | areyougoingslop`;
+  const { username } = await params
+  const requestHeaders = await headers()
+  const host = requestHeaders.get('host') ?? 'localhost:3000'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const title = `@${username} | areyougoingslop`
   const description =
-    "A playful, transparent heuristic for how AI-assisted a GitHub user's public contributions look.";
+    "A playful, transparent heuristic for how AI-assisted a GitHub user's public contributions look."
   return {
     title,
     description,
@@ -50,32 +50,32 @@ export const generateMetadata = async ({
       images: [`/api/og/${username}`],
     },
     twitter: {
-      card: "summary_large_image",
+      card: 'summary_large_image',
       title,
       description,
       images: [`/api/og/${username}`],
     },
-  };
-};
+  }
+}
 
-const confidenceStyles: Record<ScoreResponse["confidence"], string> = {
-  low: "bg-gray-100 text-gray-500",
-  medium: "bg-amber-50 text-amber-600",
-  high: "bg-[var(--accent-soft)] text-[var(--accent)]",
-};
+const confidenceStyles: Record<ScoreResponse['confidence'], string> = {
+  low: 'bg-gray-100 text-gray-500',
+  medium: 'bg-amber-50 text-amber-600',
+  high: 'bg-[var(--accent-soft)] text-[var(--accent)]',
+}
 
 const scoreColorClass = (score: number) => {
-  if (score <= 30) return "border-score-low";
-  if (score <= 70) return "border-score-mid";
-  return "border-score-high";
-};
+  if (score <= 30) return 'border-score-low'
+  if (score <= 70) return 'border-score-mid'
+  return 'border-score-high'
+}
 
 const ErrorState = ({
   title,
   description,
 }: {
-  title: string;
-  description: string;
+  title: string
+  description: string
 }) => (
   <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-left">
     <p className="font-mono text-xs text-[var(--muted)]">{title}</p>
@@ -87,15 +87,15 @@ const ErrorState = ({
       Try another
     </Link>
   </div>
-);
+)
 
 export default async function UserScorePage({
   params,
 }: {
-  params: Promise<{ username: string }>;
+  params: Promise<{ username: string }>
 }) {
-  const { username } = await params;
-  const { ok, status, payload } = await fetchScore(username);
+  const { username } = await params
+  const { ok, status, payload } = await fetchScore(username)
 
   if (!ok || !payload) {
     if (status === 404) {
@@ -106,7 +106,7 @@ export default async function UserScorePage({
             description="We couldn't find that GitHub account. Double-check the spelling and try again."
           />
         </main>
-      );
+      )
     }
     if (status === 429) {
       return (
@@ -116,7 +116,7 @@ export default async function UserScorePage({
             description="GitHub asked us to slow down. Give it a minute and re-run the score."
           />
         </main>
-      );
+      )
     }
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
@@ -125,13 +125,13 @@ export default async function UserScorePage({
           description="We couldn't compute a score right now. Try again later."
         />
       </main>
-    );
+    )
   }
 
-  const data = payload as ScoreResponse;
+  const data = payload as ScoreResponse
   const hasLowSignal = data.top_signals.some((signal) =>
-    signal.toLowerCase().includes("low signal"),
-  );
+    signal.toLowerCase().includes('low signal'),
+  )
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-6 py-16">
@@ -156,9 +156,7 @@ export default async function UserScorePage({
             unoptimized
           />
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              @{username}
-            </h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">@{username}</h1>
             <p className="font-mono text-sm text-[var(--muted)]">{data.tier}</p>
           </div>
         </div>
@@ -181,8 +179,8 @@ export default async function UserScorePage({
               amount of commit stats we can verify.
             </p>
             <p className="text-sm text-[var(--muted)]">
-              We rank the surface-level signals in public activity. The score
-              is a playful heuristic, not a definitive detector.
+              We rank the surface-level signals in public activity. The score is
+              a playful heuristic, not a definitive detector.
             </p>
             {hasLowSignal ? (
               <div className="rounded-lg border border-[var(--border)] bg-gray-50 p-4 text-sm text-[var(--muted)]">
@@ -228,5 +226,5 @@ export default async function UserScorePage({
         </div>
       </footer>
     </main>
-  );
+  )
 }

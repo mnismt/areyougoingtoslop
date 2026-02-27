@@ -1,30 +1,30 @@
-import Image from "next/image";
-import Link from "next/link";
-import { getLeaderboard } from "../../server/leaderboard";
+import Image from 'next/image'
+import Link from 'next/link'
+import { getLeaderboard } from '../../server/leaderboard'
 
 const formatDate = (value: string | null) => {
   if (!value) {
-    return "—";
+    return '—'
   }
-  const date = new Date(value);
+  const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
-    return "—";
+    return '—'
   }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-};
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
+}
 
 const scoreColor = (score: number) => {
-  if (score <= 30) return "score-low";
-  if (score <= 70) return "score-mid";
-  return "score-high";
-};
+  if (score <= 30) return 'score-low'
+  if (score <= 70) return 'score-mid'
+  return 'score-high'
+}
 
 export default async function LeaderboardPage() {
-  const leaderboard = await getLeaderboard({ limit: 50 });
+  const leaderboard = await getLeaderboard({ limit: 50 })
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-16">
@@ -83,7 +83,9 @@ export default async function LeaderboardPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-                  <span className={`text-lg font-bold ${scoreColor(entry.slop_score)}`}>
+                  <span
+                    className={`text-lg font-bold ${scoreColor(entry.slop_score)}`}
+                  >
                     {entry.slop_score}
                   </span>
                   <span className="text-[var(--muted)]">
@@ -123,5 +125,5 @@ export default async function LeaderboardPage() {
         </div>
       </footer>
     </main>
-  );
+  )
 }

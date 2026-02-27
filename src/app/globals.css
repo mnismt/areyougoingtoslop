@@ -12,8 +12,9 @@
   --slop-yellow: #eab308;
   --slop-red: #ef4444;
   --font-display: var(--font-inter), "Inter", system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), "JetBrains Mono", "SFMono-Regular",
-    "Menlo", monospace;
+  --font-mono:
+    var(--font-jetbrains), "JetBrains Mono", "SFMono-Regular", "Menlo",
+    monospace;
 }
 
 @theme inline {
