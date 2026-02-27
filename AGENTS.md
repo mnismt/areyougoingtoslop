@@ -38,6 +38,7 @@ Build **areyougoingslop**: a humorous, transparent heuristic app that scores how
 - Build passes
 - Lint/typecheck pass
 - Tests pass (or new tests added with rationale)
+- Mark completed items as `[x]` in the corresponding `docs/roadmap/epic-*.md` file
 - Docs updated if behavior/contract changed
 
 ## Tone Guardrail
