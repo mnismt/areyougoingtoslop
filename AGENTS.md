@@ -1,51 +1,20 @@
 # AGENTS.md — areyougoingslop
 
-Guidelines for coding agents (Codex, Claude Code, etc.) working in this repo.
+A humorous heuristic app that scores how AI-assisted a GitHub user's public contributions appear.
 
-## Mission
-Build **areyougoingslop**: a humorous, transparent heuristic app that scores how AI-assisted a GitHub user's public contributions appear.
+## Key References
 
-## Product Constraints (MVP)
-- Public GitHub data only.
-- User-level scoring only (no repo-level scoring in MVP).
-- Org/private activity excluded.
-- Leaderboard is default public.
-- Recency decay must be applied in scoring:
-  - 0–30d = 1.0
-  - 31–90d = 0.6
-  - 91–180d = 0.3
-  - >180d excluded
+- **PRD:** `docs/PRD.md`
+- **Architecture:** `docs/ARCHITECTURE.md` (ingestion → scoring → caching → leaderboard)
+- **Roadmap:** `docs/roadmap/README.md` + `docs/roadmap/epic-*.md`
+- **Conventions:** `docs/CONVENTIONS.md` (structure, naming, scripts, DoD)
 
-## Source of Truth
-- PRD: `docs/PRD.md`
-- Planning: `docs/roadmap/README.md` + `docs/roadmap/epic-*.md`
+## Rules
 
-## Engineering Rules
-- Always use **bun** as the package manager (e.g., `bun install`, `bun add`, `bun run`). Do not use npm/yarn/pnpm.
-- Keep changes scoped to requested task/epic.
-- Prefer small, reviewable commits.
-- Do not silently change product scope.
-- Do not weaken disclaimers around heuristic/satire nature.
-- Add/update tests when touching scoring or API contracts.
-- Keep output deterministic for scorer unit tests.
-
-## Naming Conventions
-- Component/module files must use **kebab-case** (e.g., `username-form.tsx`, `slop-gauge.tsx`).
-- Next.js special files (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`, `route.ts`, etc.) are exempt.
-- Enforced via prompt/code-review (no tooling).
-
-## Suggested Structure
-- `src/server/github/*` for ingestion
-- `src/server/scoring/*` for scoring engine
-- `src/app/api/*` for endpoints
-- `src/app/u/[username]/*` for result UI
-
-## Definition of Done (per task)
-- Build passes
-- Lint/typecheck pass
-- Tests pass (or new tests added with rationale)
-- Mark completed items as `[x]` in the corresponding `docs/roadmap/epic-*.md` file
-- Docs updated if behavior/contract changed
-
-## Tone Guardrail
-Copy should be witty and thoughtful, not mean-spirited. Roast behavior, not people.
+1. Use **bun** exclusively — never npm/yarn/pnpm.
+2. Keep changes scoped to the requested task/epic.
+3. Add/update tests when touching scoring logic or API contracts.
+4. Keep scorer output deterministic for unit tests.
+5. Never weaken disclaimers — this is satire, not a factual detector.
+6. Files use **kebab-case**; Next.js special files are exempt.
+7. Tone: witty and thoughtful, never mean-spirited. Roast behavior, not people.

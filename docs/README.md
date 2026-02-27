@@ -1,16 +1,13 @@
 # Docs Index
 
 ## Product
-- `docs/PRD.md` — Product requirements and MVP scope.
+- [`PRD.md`](./PRD.md) — Product requirements and MVP scope.
 
 ## Planning
-- `docs/roadmap/README.md` — Roadmap overview.
-- `docs/roadmap/epic-01-foundation.md` — Foundation tasks.
+- [`roadmap/README.md`](./roadmap/README.md) — Roadmap overview.
+- `roadmap/epic-*.md` — Individual epic task lists.
 
-## Conventions
-- Folder conventions are defined in `docs/README.md` (this file).
-
-## Folder Conventions
-- `src/lib` — Shared utilities (pure functions, helpers, types).
-- `src/server` — Server-only modules (GitHub ingestion, scoring, caching).
-- `src/features` — Feature modules that group UI + server logic by domain.
+## Engineering
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — Server logic: ingestion → scoring → caching → leaderboard.
+- [`CONVENTIONS.md`](./CONVENTIONS.md) — Structure, naming, scripts, and Definition of Done.
+- [`DEPLOYMENT.md`](./DEPLOYMENT.md) — Deployment guide.
