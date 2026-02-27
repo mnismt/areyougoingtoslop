@@ -2,7 +2,6 @@ import { createGitHubClient } from "./client";
 import {
   GitHubNotFoundError,
   GitHubRateLimitError,
-  GitHubValidationError,
 } from "./errors";
 import type { GitHubCommit, GitHubEvent } from "./types";
 import { assertValidGitHubUsername } from "./validation";
@@ -16,6 +15,7 @@ export type FetchUserActivityOptions = {
   maxCommitStats?: number;
 };
 
+const COMMIT_FETCH_CONCURRENCY = 5;
 const MAX_PAGES = 5;
 const MAX_COMMIT_STATS = 30;
 const RECENCY_DAYS = 180;
@@ -80,18 +80,6 @@ export const fetchUserActivity = async (
     fetcher: options.fetcher,
   });
 
-  try {
-    await client.getUser(username);
-  } catch (error) {
-    if (error instanceof GitHubNotFoundError) {
-      throw error;
-    }
-    if (error instanceof GitHubRateLimitError) {
-      throw error;
-    }
-    throw new GitHubValidationError("Unable to validate GitHub user");
-  }
-
   const now = options.now ?? new Date();
   const pages = options.maxPages ?? MAX_PAGES;
   const events: GitHubEvent[] = [];
@@ -121,18 +109,33 @@ export const fetchUserActivity = async (
 
   const maxCommitStats = options.maxCommitStats ?? MAX_COMMIT_STATS;
   const commitsToFetch = normalized.slice(0, maxCommitStats);
-  const commitStats: GitHubCommit[] = [];
 
-  for (const commit of commitsToFetch) {
-    try {
-      const detail = await client.getCommit(commit.repo, commit.sha);
-      commitStats.push(detail);
-    } catch (error) {
-      if (error instanceof GitHubRateLimitError) {
-        break;
-      }
+  let rateLimited = false;
+  const tasks = commitsToFetch.map(
+    (commit) => () =>
+      client.getCommit(commit.repo, commit.sha).catch((error) => {
+        if (error instanceof GitHubRateLimitError) {
+          rateLimited = true;
+        }
+        return null;
+      }),
+  );
+
+  const commitStats: GitHubCommit[] = [];
+  const executing = new Set<Promise<void>>();
+  for (const task of tasks) {
+    if (rateLimited) break;
+    const p = task()
+      .then((r) => {
+        if (r) commitStats.push(r);
+      })
+      .finally(() => executing.delete(p));
+    executing.add(p);
+    if (executing.size >= COMMIT_FETCH_CONCURRENCY) {
+      await Promise.race(executing);
     }
   }
+  await Promise.all(executing);
 
   const enriched = applyCommitStats(normalized, commitStats);
 

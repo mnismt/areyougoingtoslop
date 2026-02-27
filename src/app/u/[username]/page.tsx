@@ -1,7 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import ShareActions from "./ShareActions";
+import ShareActions from "./share-actions";
+import SlopGauge from "../../components/slop-gauge";
 
 type ScoreResponse = {
   slop_score: number;
@@ -57,30 +59,15 @@ export const generateMetadata = async ({
 };
 
 const confidenceStyles: Record<ScoreResponse["confidence"], string> = {
-  low: "bg-white/10 text-white/60",
-  medium: "bg-[#ffe0c21f] text-[#ffe0c2]",
-  high: "bg-[#f15a2926] text-[#f15a29]",
+  low: "bg-gray-100 text-gray-500",
+  medium: "bg-amber-50 text-amber-600",
+  high: "bg-[var(--accent-soft)] text-[var(--accent)]",
 };
 
-const ScoreGauge = ({ score }: { score: number }) => {
-  const angle = Math.round((score / 100) * 360);
-  return (
-    <div className="relative h-44 w-44">
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: `conic-gradient(#f15a29 ${angle}deg, rgba(255,255,255,0.08) 0deg)`,
-        }}
-      />
-      <div className="absolute inset-3 rounded-full bg-[#0b0a08] shadow-[0_0_40px_rgba(241,90,41,0.25)]" />
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <p className="text-xs uppercase tracking-[0.3em] text-white/50">
-          Slop Score
-        </p>
-        <p className="text-4xl font-semibold text-white">{score}</p>
-      </div>
-    </div>
-  );
+const scoreColorClass = (score: number) => {
+  if (score <= 30) return "border-score-low";
+  if (score <= 70) return "border-score-mid";
+  return "border-score-high";
 };
 
 const ErrorState = ({
@@ -90,14 +77,12 @@ const ErrorState = ({
   title: string;
   description: string;
 }) => (
-  <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-left">
-    <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-      {title}
-    </p>
-    <p className="mt-4 text-sm text-white/70">{description}</p>
+  <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-left">
+    <p className="font-mono text-xs text-[var(--muted)]">{title}</p>
+    <p className="mt-4 text-sm text-[var(--muted)]">{description}</p>
     <Link
       href="/"
-      className="mt-6 inline-flex rounded-full border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/70 transition hover:border-white/40 hover:text-white"
+      className="mt-6 inline-flex rounded-lg border border-[var(--border)] px-4 py-2 font-mono text-xs text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
     >
       Try another
     </Link>
@@ -115,17 +100,17 @@ export default async function UserScorePage({
   if (!ok || !payload) {
     if (status === 404) {
       return (
-        <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
+        <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
           <ErrorState
             title="User not found"
-            description="We couldn’t find that GitHub account. Double-check the spelling and try again."
+            description="We couldn't find that GitHub account. Double-check the spelling and try again."
           />
         </main>
       );
     }
     if (status === 429) {
       return (
-        <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
+        <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
           <ErrorState
             title="Rate limited"
             description="GitHub asked us to slow down. Give it a minute and re-run the score."
@@ -134,10 +119,10 @@ export default async function UserScorePage({
       );
     }
     return (
-      <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
+      <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
         <ErrorState
           title="Score unavailable"
-          description="We couldn’t compute a score right now. Try again later."
+          description="We couldn't compute a score right now. Try again later."
         />
       </main>
     );
@@ -149,94 +134,99 @@ export default async function UserScorePage({
   );
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#f15a291f,transparent_40%),radial-gradient(circle_at_80%_80%,#ffe0c233,transparent_35%),linear-gradient(160deg,#0b0a08_0%,#14100c_55%,#0b0a08_100%)]" />
-      <main className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 px-6 py-16">
-        <Link
-          href="/"
-          className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]"
-        >
-          ← back
-        </Link>
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-6 py-16">
+      <Link
+        href="/"
+        className="font-mono text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+      >
+        ← back
+      </Link>
 
-        <section
-          id="share-card"
-          className="flex flex-col gap-8 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur animate-rise"
-        >
-          <div className="flex flex-col gap-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+      <section
+        id="share-card"
+        className="flex flex-col gap-8 rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 animate-rise"
+      >
+        <div className="flex items-center gap-4">
+          <Image
+            src={`https://github.com/${username}.png`}
+            alt=""
+            width={56}
+            height={56}
+            className="h-14 w-14 rounded-full bg-gray-100"
+            unoptimized
+          />
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold sm:text-3xl">
               @{username}
-            </p>
-            <h1 className="text-3xl font-semibold text-white sm:text-4xl">
-              {data.tier}
             </h1>
+            <p className="font-mono text-sm text-[var(--muted)]">{data.tier}</p>
           </div>
+        </div>
 
-          <div className="flex flex-col items-start gap-8 md:flex-row md:items-center">
-            <ScoreGauge score={data.slop_score} />
-            <div className="flex flex-1 flex-col gap-4">
-              <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em]">
-                <span
-                  className={`rounded-full px-3 py-1 ${confidenceStyles[data.confidence]}`}
-                >
-                  {data.confidence} confidence
-                </span>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-white/60">
-                  {data.scoring_window}
-                </span>
-              </div>
-              <p className="text-xs text-white/50">
-                Confidence reflects the volume of recent public activity and the
-                amount of commit stats we can verify.
-              </p>
-              <p className="text-sm text-white/70">
-                We rank the surface-level signals in public activity. The score
-                is a playful heuristic, not a definitive detector.
-              </p>
-              <div className="rounded-2xl border border-[#f15a2933] bg-[#f15a2914] p-4 text-xs uppercase tracking-[0.2em] text-[#f15a29]">
-                Satirical heuristic, not proof. Roast the behavior, not the
-                person.
-              </div>
-              {hasLowSignal ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                  Not enough recent activity to lean on. Try again after a few
-                  public commits.
-                </div>
-              ) : null}
-              <ShareActions username={username} />
+        <div className="flex flex-col items-center gap-8 md:flex-row">
+          <SlopGauge score={data.slop_score} />
+          <div className="flex flex-1 flex-col gap-4">
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={`rounded-lg px-3 py-1 font-mono text-xs ${confidenceStyles[data.confidence]}`}
+              >
+                {data.confidence} confidence
+              </span>
+              <span className="rounded-lg border border-[var(--border)] px-3 py-1 font-mono text-xs text-[var(--muted)]">
+                {data.scoring_window}
+              </span>
             </div>
+            <p className="text-xs text-[var(--muted)]">
+              Confidence reflects the volume of recent public activity and the
+              amount of commit stats we can verify.
+            </p>
+            <p className="text-sm text-[var(--muted)]">
+              We rank the surface-level signals in public activity. The score
+              is a playful heuristic, not a definitive detector.
+            </p>
+            {hasLowSignal ? (
+              <div className="rounded-lg border border-[var(--border)] bg-gray-50 p-4 text-sm text-[var(--muted)]">
+                Not enough recent activity to lean on. Try again after a few
+                public commits.
+              </div>
+            ) : null}
+            <ShareActions username={username} />
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="grid gap-6 md:grid-cols-3">
-          {data.top_signals.map((signal) => (
-            <div
-              key={signal}
-              className="rounded-3xl border border-white/10 bg-[#15120f] p-6 text-sm text-white/70 animate-rise animate-delay-1"
-            >
-              {signal}
-            </div>
-          ))}
-        </section>
-
-        <footer className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-          <span>Satirical heuristic. Roast the code, not the coder.</span>
-          <div className="flex flex-wrap gap-4">
-            <Link href="/how-it-works" className="hover:text-white">
-              How scoring works
-            </Link>
-            <Link href="/feedback" className="hover:text-white">
-              Feedback
-            </Link>
-            <Link href="/terms" className="hover:text-white">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:text-white">
-              Privacy
-            </Link>
+      <section className="grid gap-4 md:grid-cols-3">
+        {data.top_signals.map((signal) => (
+          <div
+            key={signal}
+            className={`rounded-xl border border-[var(--border)] border-l-4 ${scoreColorClass(data.slop_score)} bg-[var(--card)] p-5 text-sm text-[var(--muted)] animate-rise animate-delay-1`}
+          >
+            {signal}
           </div>
-        </footer>
-      </main>
-    </div>
+        ))}
+      </section>
+
+      <p className="font-mono text-xs text-[var(--muted)] text-center">
+        Satirical heuristic, not proof. Roast the behavior, not the person.
+      </p>
+
+      <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-[var(--muted)]">
+        <span>Built for screenshots, not courtrooms.</span>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/how-it-works" className="hover:text-[var(--foreground)]">
+            How it works
+          </Link>
+          <Link href="/feedback" className="hover:text-[var(--foreground)]">
+            Feedback
+          </Link>
+          <Link href="/terms" className="hover:text-[var(--foreground)]">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-[var(--foreground)]">
+            Privacy
+          </Link>
+        </div>
+      </footer>
+    </main>
   );
 }

@@ -37,7 +37,7 @@ export default function FeedbackForm() {
       onSubmit={handleSubmit}
       className="flex w-full flex-col gap-4 text-left"
     >
-      <label className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+      <label className="font-mono text-xs text-[var(--muted)]">
         Your feedback
       </label>
       <textarea
@@ -45,11 +45,11 @@ export default function FeedbackForm() {
         onChange={(event) => setMessage(event.target.value)}
         rows={5}
         placeholder="Tell us what felt fair, what felt off, and what to fix next."
-        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/90 placeholder:text-white/35 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[rgba(241,90,41,0.35)]"
+        className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] placeholder:text-gray-400 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
       />
       <button
         type="submit"
-        className="h-11 rounded-full bg-[var(--accent)] px-6 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_14px_40px_rgba(241,90,41,0.35)]"
+        className="h-11 rounded-xl bg-[var(--accent)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
       >
         {status === "sending"
           ? "Sending..."
@@ -58,7 +58,7 @@ export default function FeedbackForm() {
             : "Send feedback"}
       </button>
       {status === "error" ? (
-        <p className="text-xs text-[var(--accent-soft)]">
+        <p className="text-xs text-[var(--accent)]">
           Something went wrong. Try again.
         </p>
       ) : null}

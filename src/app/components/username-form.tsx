@@ -15,7 +15,7 @@ export default function UsernameForm() {
     event.preventDefault();
     const cleaned = sanitizeUsername(username);
     if (!cleaned) {
-      setError("Drop a GitHub username and we’ll do the rest.");
+      setError("Drop a GitHub username and we'll do the rest.");
       return;
     }
     setError("");
@@ -25,27 +25,27 @@ export default function UsernameForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex w-full flex-col gap-3 text-left"
+      className="flex w-full flex-col gap-2 text-left"
     >
-      <label className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-        GitHub Username
+      <label className="font-mono text-xs text-[var(--muted)]">
+        GitHub username
       </label>
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           placeholder="octocat"
-          className="h-12 w-full flex-1 rounded-full border border-white/10 bg-white/5 px-5 text-base text-white/90 placeholder:text-white/35 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[rgba(241,90,41,0.35)]"
+          className="h-12 w-full flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 text-base text-[var(--foreground)] placeholder:text-gray-400 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
         />
         <button
           type="submit"
-          className="h-12 rounded-full bg-[var(--accent)] px-6 text-sm font-semibold uppercase tracking-[0.2em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_14px_40px_rgba(241,90,41,0.35)]"
+          className="h-12 rounded-xl bg-[var(--accent)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          Score Me
+          Score me
         </button>
       </div>
       {error ? (
-        <p className="text-sm text-[var(--accent-soft)]">{error}</p>
+        <p className="text-sm text-[var(--accent)]">{error}</p>
       ) : null}
     </form>
   );

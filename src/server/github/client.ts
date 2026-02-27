@@ -40,7 +40,7 @@ const sleep = (ms: number) =>
   });
 
 const shouldRetry = (status: number) =>
-  status === 429 || status === 502 || status === 503 || status === 504;
+  status === 502 || status === 503 || status === 504;
 
 const parseRateLimitReset = (resetHeader: string | null) => {
   if (!resetHeader) {
@@ -92,6 +92,17 @@ const request = async <T>(
           response.status,
         );
       }
+    }
+
+    if (response.status === 429) {
+      const resetAt = parseRateLimitReset(
+        response.headers.get("X-RateLimit-Reset"),
+      );
+      throw new GitHubRateLimitError(
+        "GitHub API rate limit exceeded",
+        resetAt,
+        response.status,
+      );
     }
 
     if (!response.ok) {

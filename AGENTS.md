@@ -28,6 +28,11 @@ Build **areyougoingslop**: a humorous, transparent heuristic app that scores how
 - Add/update tests when touching scoring or API contracts.
 - Keep output deterministic for scorer unit tests.
 
+## Naming Conventions
+- Component/module files must use **kebab-case** (e.g., `username-form.tsx`, `slop-gauge.tsx`).
+- Next.js special files (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`, `route.ts`, etc.) are exempt.
+- Enforced via prompt/code-review (no tooling).
+
 ## Suggested Structure
 - `src/server/github/*` for ingestion
 - `src/server/scoring/*` for scoring engine

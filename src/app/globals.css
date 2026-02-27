@@ -1,16 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0a08;
-  --foreground: #f7f1e6;
-  --muted: #b7ada0;
-  --accent: #f15a29;
-  --accent-soft: #ffe0c2;
-  --card: #15120f;
-  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
-    "Spectral", serif;
-  --font-mono: "SFMono-Regular", "Menlo", "Monaco", "Consolas",
-    "Liberation Mono", monospace;
+  --background: #fafaf9;
+  --foreground: #1a1a1a;
+  --muted: #6b7280;
+  --accent: #e11d48;
+  --accent-soft: #fce7f3;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --slop-green: #22c55e;
+  --slop-yellow: #eab308;
+  --slop-red: #ef4444;
+  --font-display: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", "SFMono-Regular",
+    "Menlo", monospace;
 }
 
 @theme inline {
@@ -26,14 +29,14 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-display), system-ui, sans-serif;
+  font-family: var(--font-display);
   min-height: 100vh;
 }
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -41,38 +44,42 @@ body {
   }
 }
 
-@keyframes glow {
-  0% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 0.2;
-  }
-}
-
 .animate-rise {
-  animation: rise 0.7s ease-out both;
-}
-
-.animate-rise-slow {
-  animation: rise 1s ease-out both;
+  animation: rise 0.4s ease-out both;
 }
 
 .animate-delay-1 {
-  animation-delay: 120ms;
+  animation-delay: 80ms;
 }
 
 .animate-delay-2 {
-  animation-delay: 240ms;
+  animation-delay: 160ms;
 }
 
 .animate-delay-3 {
-  animation-delay: 360ms;
+  animation-delay: 240ms;
 }
 
-.glow-pulse {
-  animation: glow 3.4s ease-in-out infinite;
+.score-low {
+  color: var(--slop-green);
+}
+
+.score-mid {
+  color: var(--slop-yellow);
+}
+
+.score-high {
+  color: var(--slop-red);
+}
+
+.border-score-low {
+  border-left-color: var(--slop-green);
+}
+
+.border-score-mid {
+  border-left-color: var(--slop-yellow);
+}
+
+.border-score-high {
+  border-left-color: var(--slop-red);
 }

@@ -20,7 +20,7 @@ const buildQuery = (query) => {
 const sleep = (ms) => new Promise((resolve) => {
     setTimeout(resolve, ms);
 });
-const shouldRetry = (status) => status === 429 || status === 502 || status === 503 || status === 504;
+const shouldRetry = (status) => status === 502 || status === 503 || status === 504;
 const parseRateLimitReset = (resetHeader) => {
     if (!resetHeader) {
         return new Date(Date.now() + 60000).toISOString();
@@ -57,6 +57,10 @@ const request = async (path, config, options) => {
                 const resetAt = parseRateLimitReset(response.headers.get("X-RateLimit-Reset"));
                 throw new errors_1.GitHubRateLimitError("GitHub API rate limit exceeded", resetAt, response.status);
             }
+        }
+        if (response.status === 429) {
+            const resetAt = parseRateLimitReset(response.headers.get("X-RateLimit-Reset"));
+            throw new errors_1.GitHubRateLimitError("GitHub API rate limit exceeded", resetAt, response.status);
         }
         if (!response.ok) {
             if (attempt < retries && shouldRetry(response.status)) {

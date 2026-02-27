@@ -17,6 +17,20 @@ const confidenceRank = {
     high: 2,
 };
 const resolveStoragePath = (storagePath) => node_path_1.default.resolve(storagePath ?? DEFAULT_STORAGE_PATH);
+let writeLock = Promise.resolve();
+const withLock = async (fn) => {
+    let release;
+    const acquired = new Promise((resolve) => { release = resolve; });
+    const previous = writeLock;
+    writeLock = acquired;
+    await previous;
+    try {
+        return await fn();
+    }
+    finally {
+        release();
+    }
+};
 const loadState = async (storagePath) => {
     try {
         const raw = await node_fs_1.promises.readFile(storagePath, "utf-8");
@@ -26,8 +40,12 @@ const loadState = async (storagePath) => {
         }
         return parsed;
     }
-    catch {
-        return { entries: [] };
+    catch (err) {
+        if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+            return { entries: [] };
+        }
+        console.warn("Failed to load leaderboard state:", err);
+        throw err;
     }
 };
 const saveState = async (storagePath, state) => {
@@ -46,34 +64,36 @@ const sortEntries = (entries) => entries.sort((a, b) => {
     return a.username.localeCompare(b.username);
 });
 const upsertLeaderboardEntry = async (entry, options = {}) => {
-    const storagePath = resolveStoragePath(options.storagePath);
-    const now = options.now ?? new Date();
-    const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
-    const minInterval = options.minUpdateIntervalMinutes ?? DEFAULT_MIN_UPDATE_INTERVAL_MINUTES;
-    const state = await loadState(storagePath);
-    const normalized = entry.username.toLowerCase();
-    const existingIndex = state.entries.findIndex((item) => item.username.toLowerCase() === normalized);
-    if (existingIndex >= 0) {
-        const existing = state.entries[existingIndex];
-        const last = new Date(existing.last_scored_at);
-        const diffMinutes = (now.getTime() - last.getTime()) / (1000 * 60);
-        if (!Number.isNaN(diffMinutes) && diffMinutes < minInterval) {
-            return null;
+    return withLock(async () => {
+        const storagePath = resolveStoragePath(options.storagePath);
+        const now = options.now ?? new Date();
+        const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
+        const minInterval = options.minUpdateIntervalMinutes ?? DEFAULT_MIN_UPDATE_INTERVAL_MINUTES;
+        const state = await loadState(storagePath);
+        const normalized = entry.username.toLowerCase();
+        const existingIndex = state.entries.findIndex((item) => item.username.toLowerCase() === normalized);
+        if (existingIndex >= 0) {
+            const existing = state.entries[existingIndex];
+            const last = new Date(existing.last_scored_at);
+            const diffMinutes = (now.getTime() - last.getTime()) / (1000 * 60);
+            if (!Number.isNaN(diffMinutes) && diffMinutes < minInterval) {
+                return null;
+            }
         }
-    }
-    const updatedEntry = {
-        ...entry,
-        last_scored_at: now.toISOString(),
-    };
-    if (existingIndex >= 0) {
-        state.entries[existingIndex] = updatedEntry;
-    }
-    else {
-        state.entries.push(updatedEntry);
-    }
-    const trimmed = sortEntries(state.entries).slice(0, maxEntries);
-    await saveState(storagePath, { entries: trimmed });
-    return updatedEntry;
+        const updatedEntry = {
+            ...entry,
+            last_scored_at: now.toISOString(),
+        };
+        if (existingIndex >= 0) {
+            state.entries[existingIndex] = updatedEntry;
+        }
+        else {
+            state.entries.push(updatedEntry);
+        }
+        const trimmed = sortEntries(state.entries).slice(0, maxEntries);
+        await saveState(storagePath, { entries: trimmed });
+        return updatedEntry;
+    });
 };
 exports.upsertLeaderboardEntry = upsertLeaderboardEntry;
 const getLeaderboard = async (options = {}) => {

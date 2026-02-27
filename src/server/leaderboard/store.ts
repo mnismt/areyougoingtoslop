@@ -33,6 +33,21 @@ const confidenceRank: Record<NonNullable<LeaderboardStoreOptions["confidenceFloo
 const resolveStoragePath = (storagePath?: string) =>
   path.resolve(storagePath ?? DEFAULT_STORAGE_PATH);
 
+let writeLock = Promise.resolve();
+
+const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
+  let release: () => void;
+  const acquired = new Promise<void>((resolve) => { release = resolve; });
+  const previous = writeLock;
+  writeLock = acquired;
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    release!();
+  }
+};
+
 const loadState = async (
   storagePath: string,
 ): Promise<LeaderboardState> => {
@@ -43,8 +58,12 @@ const loadState = async (
       return { entries: [] };
     }
     return parsed;
-  } catch {
-    return { entries: [] };
+  } catch (err: unknown) {
+    if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+      return { entries: [] };
+    }
+    console.warn("Failed to load leaderboard state:", err);
+    throw err;
   }
 };
 
@@ -71,41 +90,43 @@ export const upsertLeaderboardEntry = async (
   entry: LeaderboardEntry,
   options: LeaderboardStoreOptions = {},
 ): Promise<LeaderboardEntry | null> => {
-  const storagePath = resolveStoragePath(options.storagePath);
-  const now = options.now ?? new Date();
-  const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
-  const minInterval =
-    options.minUpdateIntervalMinutes ?? DEFAULT_MIN_UPDATE_INTERVAL_MINUTES;
+  return withLock(async () => {
+    const storagePath = resolveStoragePath(options.storagePath);
+    const now = options.now ?? new Date();
+    const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
+    const minInterval =
+      options.minUpdateIntervalMinutes ?? DEFAULT_MIN_UPDATE_INTERVAL_MINUTES;
 
-  const state = await loadState(storagePath);
-  const normalized = entry.username.toLowerCase();
-  const existingIndex = state.entries.findIndex(
-    (item) => item.username.toLowerCase() === normalized,
-  );
+    const state = await loadState(storagePath);
+    const normalized = entry.username.toLowerCase();
+    const existingIndex = state.entries.findIndex(
+      (item) => item.username.toLowerCase() === normalized,
+    );
 
-  if (existingIndex >= 0) {
-    const existing = state.entries[existingIndex];
-    const last = new Date(existing.last_scored_at);
-    const diffMinutes = (now.getTime() - last.getTime()) / (1000 * 60);
-    if (!Number.isNaN(diffMinutes) && diffMinutes < minInterval) {
-      return null;
+    if (existingIndex >= 0) {
+      const existing = state.entries[existingIndex];
+      const last = new Date(existing.last_scored_at);
+      const diffMinutes = (now.getTime() - last.getTime()) / (1000 * 60);
+      if (!Number.isNaN(diffMinutes) && diffMinutes < minInterval) {
+        return null;
+      }
     }
-  }
 
-  const updatedEntry: LeaderboardEntry = {
-    ...entry,
-    last_scored_at: now.toISOString(),
-  };
+    const updatedEntry: LeaderboardEntry = {
+      ...entry,
+      last_scored_at: now.toISOString(),
+    };
 
-  if (existingIndex >= 0) {
-    state.entries[existingIndex] = updatedEntry;
-  } else {
-    state.entries.push(updatedEntry);
-  }
+    if (existingIndex >= 0) {
+      state.entries[existingIndex] = updatedEntry;
+    } else {
+      state.entries.push(updatedEntry);
+    }
 
-  const trimmed = sortEntries(state.entries).slice(0, maxEntries);
-  await saveState(storagePath, { entries: trimmed });
-  return updatedEntry;
+    const trimmed = sortEntries(state.entries).slice(0, maxEntries);
+    await saveState(storagePath, { entries: trimmed });
+    return updatedEntry;
+  });
 };
 
 export const getLeaderboard = async (options: LeaderboardStoreOptions = {}) => {

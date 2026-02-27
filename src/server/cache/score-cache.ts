@@ -5,6 +5,8 @@ type CacheEntry = {
   expiresAt: number;
 };
 
+const MAX_CACHE_SIZE = 1000;
+
 const scoreCache = new Map<string, CacheEntry>();
 
 export const getCachedScore = (username: string, now: Date) => {
@@ -28,6 +30,25 @@ export const setCachedScore = (
 ) => {
   const key = username.toLowerCase();
   scoreCache.set(key, { value, expiresAt: now.getTime() + ttlMs });
+
+  if (scoreCache.size > MAX_CACHE_SIZE) {
+    const nowMs = now.getTime();
+    for (const [k, entry] of scoreCache) {
+      if (entry.expiresAt <= nowMs) {
+        scoreCache.delete(k);
+      }
+    }
+
+    if (scoreCache.size > MAX_CACHE_SIZE) {
+      const sorted = [...scoreCache.entries()].sort(
+        (a, b) => a[1].expiresAt - b[1].expiresAt,
+      );
+      const toRemove = sorted.length - MAX_CACHE_SIZE;
+      for (let i = 0; i < toRemove; i++) {
+        scoreCache.delete(sorted[i][0]);
+      }
+    }
+  }
 };
 
 export const clearScoreCache = () => {

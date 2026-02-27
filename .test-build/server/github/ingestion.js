@@ -4,6 +4,7 @@ exports.fetchUserActivity = void 0;
 const client_1 = require("./client");
 const errors_1 = require("./errors");
 const validation_1 = require("./validation");
+const COMMIT_FETCH_CONCURRENCY = 5;
 const MAX_PAGES = 5;
 const MAX_COMMIT_STATS = 30;
 const RECENCY_DAYS = 180;
@@ -55,18 +56,6 @@ const fetchUserActivity = async (username, options = {}) => {
         token: options.token ?? process.env.GITHUB_TOKEN,
         fetcher: options.fetcher,
     });
-    try {
-        await client.getUser(username);
-    }
-    catch (error) {
-        if (error instanceof errors_1.GitHubNotFoundError) {
-            throw error;
-        }
-        if (error instanceof errors_1.GitHubRateLimitError) {
-            throw error;
-        }
-        throw new errors_1.GitHubValidationError("Unable to validate GitHub user");
-    }
     const now = options.now ?? new Date();
     const pages = options.maxPages ?? MAX_PAGES;
     const events = [];
@@ -90,18 +79,30 @@ const fetchUserActivity = async (username, options = {}) => {
     });
     const maxCommitStats = options.maxCommitStats ?? MAX_COMMIT_STATS;
     const commitsToFetch = normalized.slice(0, maxCommitStats);
-    const commitStats = [];
-    for (const commit of commitsToFetch) {
-        try {
-            const detail = await client.getCommit(commit.repo, commit.sha);
-            commitStats.push(detail);
+    let rateLimited = false;
+    const tasks = commitsToFetch.map((commit) => () => client.getCommit(commit.repo, commit.sha).catch((error) => {
+        if (error instanceof errors_1.GitHubRateLimitError) {
+            rateLimited = true;
         }
-        catch (error) {
-            if (error instanceof errors_1.GitHubRateLimitError) {
-                break;
-            }
+        return null;
+    }));
+    const commitStats = [];
+    const executing = new Set();
+    for (const task of tasks) {
+        if (rateLimited)
+            break;
+        const p = task()
+            .then((r) => {
+            if (r)
+                commitStats.push(r);
+        })
+            .finally(() => executing.delete(p));
+        executing.add(p);
+        if (executing.size >= COMMIT_FETCH_CONCURRENCY) {
+            await Promise.race(executing);
         }
     }
+    await Promise.all(executing);
     const enriched = applyCommitStats(normalized, commitStats);
     return enriched.sort((a, b) => {
         const timeDiff = new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime();

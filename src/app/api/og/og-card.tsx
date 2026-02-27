@@ -9,6 +9,12 @@ type OgCardProps = {
   username?: string;
 };
 
+const scoreColor = (score: number) => {
+  if (score <= 30) return "#22c55e";
+  if (score <= 70) return "#eab308";
+  return "#ef4444";
+};
+
 export const renderOgCard = ({
   title,
   subtitle,
@@ -23,11 +29,9 @@ export const renderOgCard = ({
         display: "flex",
         height: "100%",
         width: "100%",
-        background:
-          "linear-gradient(135deg, rgba(11,10,8,1) 0%, rgba(21,18,15,1) 50%, rgba(11,10,8,1) 100%)",
-        color: "#f7f1e6",
-        fontFamily:
-          '"Iowan Old Style","Palatino Linotype","Book Antiqua","Spectral",serif',
+        background: "linear-gradient(135deg, #fafaf9 0%, #f5f5f4 50%, #fafaf9 100%)",
+        color: "#1a1a1a",
+        fontFamily: '"Inter","Helvetica Neue","Arial",sans-serif',
         padding: "56px",
         boxSizing: "border-box",
       }}
@@ -43,19 +47,18 @@ export const renderOgCard = ({
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <p
             style={{
-              fontSize: 20,
-              letterSpacing: "0.35em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.55)",
+              fontSize: 18,
+              color: "#6b7280",
               margin: 0,
+              fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
             }}
           >
             areyougoingslop
           </p>
-          <h1 style={{ fontSize: 58, margin: 0, lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: 54, margin: 0, lineHeight: 1.1, fontWeight: 700 }}>
             {title}
           </h1>
-          <p style={{ fontSize: 24, margin: 0, color: "rgba(255,255,255,0.7)" }}>
+          <p style={{ fontSize: 22, margin: 0, color: "#6b7280" }}>
             {subtitle}
           </p>
         </div>
@@ -65,8 +68,8 @@ export const renderOgCard = ({
               display: "flex",
               gap: "16px",
               alignItems: "center",
-              fontSize: 22,
-              color: "rgba(255,255,255,0.65)",
+              fontSize: 20,
+              color: "#6b7280",
             }}
           >
             @{username}
@@ -75,29 +78,36 @@ export const renderOgCard = ({
       </div>
       <div
         style={{
-          width: "320px",
+          width: "300px",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
           gap: "16px",
-          borderRadius: "32px",
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "20px",
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
         }}
       >
         <p
           style={{
-            fontSize: 18,
-            letterSpacing: "0.3em",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,0.55)",
+            fontSize: 14,
+            color: "#6b7280",
             margin: 0,
+            fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
           }}
         >
-          Slop Score
+          slop score
         </p>
-        <p style={{ fontSize: 76, margin: 0, color: "#f15a29" }}>
+        <p
+          style={{
+            fontSize: 72,
+            margin: 0,
+            color: score != null ? scoreColor(score) : "#e11d48",
+            fontWeight: 700,
+            fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
+          }}
+        >
           {score ?? "--"}
         </p>
         <div
@@ -112,9 +122,10 @@ export const renderOgCard = ({
           <p
             style={{
               margin: 0,
-              fontSize: 20,
-              color: "rgba(255,255,255,0.75)",
+              fontSize: 18,
+              color: "#1a1a1a",
               textAlign: "center",
+              fontWeight: 600,
             }}
           >
             {tier ?? "Playful heuristic"}
@@ -123,8 +134,9 @@ export const renderOgCard = ({
             <p
               style={{
                 margin: 0,
-                fontSize: 16,
-                color: "rgba(255,255,255,0.45)",
+                fontSize: 14,
+                color: "#6b7280",
+                fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
               }}
             >
               {confidence} confidence

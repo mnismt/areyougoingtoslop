@@ -64,11 +64,11 @@ export default function ShareActions({ username }: ShareActionsProps) {
   };
 
   return (
-    <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em]">
+    <div className="flex flex-wrap gap-3">
       <button
         type="button"
         onClick={handleCopy}
-        className="rounded-full border border-white/15 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
+        className="rounded-lg border border-[var(--border)] px-4 py-2 font-mono text-xs text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
       >
         {copyState === "done"
           ? "Link copied"
@@ -79,7 +79,7 @@ export default function ShareActions({ username }: ShareActionsProps) {
       <button
         type="button"
         onClick={handleDownload}
-        className="rounded-full border border-white/15 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
+        className="rounded-lg border border-[var(--border)] px-4 py-2 font-mono text-xs text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
       >
         {downloadState === "done"
           ? "Card saved"
