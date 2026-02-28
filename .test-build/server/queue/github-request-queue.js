@@ -9,21 +9,36 @@ const promises_1 = require("node:timers/promises");
 const ioredis_1 = __importDefault(require("ioredis"));
 const errors_1 = require("../github/errors");
 const raw_client_1 = require("../github/raw-client");
+const parseIntegerEnv = (name, fallback) => {
+    const raw = process.env[name];
+    if (!raw) {
+        return fallback;
+    }
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+        return fallback;
+    }
+    return parsed;
+};
+const parseBoundedIntegerEnv = (name, fallback, min, max) => {
+    const parsed = parseIntegerEnv(name, fallback);
+    return Math.min(max, Math.max(min, parsed));
+};
 const STREAM_KEY = 'ays:gh:req:stream';
 const GROUP_NAME = 'ays:gh:req:workers';
 const CONSUMER_PREFIX = 'ays-gh';
 const DELAYED_ZSET_KEY = 'ays:gh:req:delayed';
 const RESULT_KEY_PREFIX = 'ays:gh:req:result:';
-const RESULT_TTL_MS = 60 * 1000;
-const REQUEST_TIMEOUT_MS = 30 * 1000;
-const WORKER_CONCURRENCY = 4;
-const MAX_ATTEMPTS = 4;
-const RETRY_BASE_MS = 350;
-const MAX_RETRY_DELAY_MS = 30 * 1000;
-const SCHEDULER_BATCH_SIZE = 32;
-const SCHEDULER_INTERVAL_MS = 200;
-const STALE_RECLAIM_IDLE_MS = 20 * 1000;
-const RECLAIM_INTERVAL_MS = 5 * 1000;
+const RESULT_TTL_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_RESULT_TTL_MS', 60 * 1000, 5 * 1000, 10 * 60 * 1000);
+const REQUEST_TIMEOUT_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_REQUEST_TIMEOUT_MS', 30 * 1000, 5 * 1000, 5 * 60 * 1000);
+const WORKER_CONCURRENCY = parseBoundedIntegerEnv('GITHUB_QUEUE_WORKERS', 4, 1, 12);
+const MAX_ATTEMPTS = parseBoundedIntegerEnv('GITHUB_QUEUE_MAX_ATTEMPTS', 4, 1, 12);
+const RETRY_BASE_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_RETRY_BASE_MS', 350, 100, 5 * 1000);
+const MAX_RETRY_DELAY_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_MAX_RETRY_DELAY_MS', 30 * 1000, 1 * 1000, 15 * 60 * 1000);
+const SCHEDULER_BATCH_SIZE = parseBoundedIntegerEnv('GITHUB_QUEUE_SCHEDULER_BATCH', 32, 1, 256);
+const SCHEDULER_INTERVAL_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_SCHEDULER_INTERVAL_MS', 200, 50, 2 * 1000);
+const STALE_RECLAIM_IDLE_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_RECLAIM_IDLE_MS', 20 * 1000, 2 * 1000, 30 * 60 * 1000);
+const RECLAIM_INTERVAL_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_RECLAIM_INTERVAL_MS', 5 * 1000, 250, 60 * 1000);
 const getWorkerState = () => {
     const globalState = globalThis;
     if (!globalState.__aysGhQueueState) {

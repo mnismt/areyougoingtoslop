@@ -201,8 +201,8 @@ Event types:
 
 ### I) Documentation
 - [x] Update `docs/ARCHITECTURE.md` request flow with job + streaming path.
-- [ ] Update `docs/PRD.md` performance and UX sections with partial-result model.
-- [ ] Update deployment docs with required env vars and cache notes.
+- [x] Update `docs/PRD.md` performance and UX sections with partial-result model.
+- [x] Update deployment docs with required env vars and cache notes.
 
 ## Dependencies
 - Epic 02 (Ingestion) foundations available.

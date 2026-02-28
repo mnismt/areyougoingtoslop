@@ -21,11 +21,22 @@ GET /api/score/[username]
   → fetchUserActivity() + computeSlopScore()
   → upsert leaderboard
   → cache write + return
+
+GitHub transport inside ingestion:
+  → createGitHubClient()
+  → if REDIS_URL is set and no custom fetcher is passed:
+      enqueue request to Redis Stream queue
+      embedded worker executes GitHub request
+      retries/backoff/rate-limit delay handled in queue worker
+      response returned to ingestion via Redis result key
+  → otherwise (tests/local fallback): direct GitHub HTTP call
 ```
 
 Entrypoints:
 - `src/server/api/score-handler.ts` (legacy synchronous API)
 - `src/server/api/score-jobs.ts` (phase-1 async jobs + polling snapshots)
+- `src/server/queue/github-request-queue.ts` (Redis Stream queue + embedded workers)
+- `src/server/github/raw-client.ts` (direct GitHub HTTP client, worker-only in queue mode)
 
 ---
 
@@ -42,12 +53,22 @@ Fetches the last **180 days** of a user's public activity via GitHub REST API.
 | **Expand repos** | `GET /users/:name/repos` and enumerate repo commits by `author + since/until` |
 | **Dedupe** | Merge event-derived and repo-derived commits by `repo:sha` |
 | **Enrich** | Fetch commit details (`GET /repos/:repo/commits/:sha`) for stats — up to 120 commits with token (30 without), 5 concurrent |
+| **Transport** | Queue-backed GitHub requests when `REDIS_URL` is set; direct HTTP fallback when queue is disabled |
 
 ### Error handling
 - `GitHubNotFoundError` → 404 to client
 - `GitHubRateLimitError` → 429 to client, stops enrichment early
 - Retries on 502/503/504 (up to 2 retries, exponential backoff)
 - Events pagination limit (`422`) is handled gracefully and exposed as a limitation flag
+
+### Queue mode reliability
+- Queue implementation uses Redis Streams + consumer groups.
+- Embedded workers run inside the same Node service process (no separate BullMQ service).
+- Retries are delayed with exponential backoff and jitter.
+- Rate-limit responses are rescheduled close to GitHub reset time.
+- Stale in-flight jobs are reclaimed with `XAUTOCLAIM`.
+- Worker/retry/timeout behavior can be tuned via `GITHUB_QUEUE_*` env vars.
+- Queue mode centralizes all GitHub requests, but score-job snapshots are still process-memory state.
 
 ### Core type: `ContributionEvent`
 ```ts
@@ -165,6 +186,12 @@ Based on data density:
   }
 }
 ```
+
+### 2.8 Job Endpoint Error Semantics
+
+- `GET /api/score/jobs/[job_id]` returns `404` with `error: "job_not_found"` when the job id does not exist.
+- `snapshot.error.code === "not_found"` means the GitHub username itself does not exist.
+- Score-job snapshots are retained in memory for 30 minutes (`JOB_RETENTION_MS`). After expiry (or process restart), polling can return `job_not_found`.
 
 ---
 

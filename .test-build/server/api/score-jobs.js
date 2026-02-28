@@ -10,8 +10,16 @@ const metrics_1 = require("../perf/metrics");
 const score_1 = require("./score");
 const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const JOB_RETENTION_MS = 30 * 60 * 1000;
-const jobs = new Map();
-const activeByUsername = new Map();
+const getRuntimeState = () => {
+    const globalState = globalThis;
+    if (!globalState.__aysScoreJobsState) {
+        globalState.__aysScoreJobsState = {
+            jobs: new Map(),
+            activeByUsername: new Map(),
+        };
+    }
+    return globalState.__aysScoreJobsState;
+};
 const emptyCoverage = {
     commits_discovered: 0,
     commits_enriched: 0,
@@ -42,6 +50,7 @@ const touch = (job) => {
     job.updatedAt = new Date().toISOString();
 };
 const cleanupJobs = () => {
+    const { jobs, activeByUsername } = getRuntimeState();
     const cutoff = Date.now() - JOB_RETENTION_MS;
     for (const [jobId, job] of jobs) {
         const updatedAt = new Date(job.updatedAt).getTime();
@@ -80,6 +89,7 @@ const mapError = (error) => {
     };
 };
 const runScoreJob = async (jobId) => {
+    const { jobs, activeByUsername } = getRuntimeState();
     const job = jobs.get(jobId);
     if (!job) {
         return;
@@ -144,6 +154,7 @@ const runScoreJob = async (jobId) => {
     }
 };
 const createOrAttachScoreJob = (usernameRaw) => {
+    const { jobs, activeByUsername } = getRuntimeState();
     cleanupJobs();
     const username = usernameRaw.trim();
     if (!(0, github_1.isValidGitHubUsername)(username)) {
@@ -219,6 +230,7 @@ const createOrAttachScoreJob = (usernameRaw) => {
 };
 exports.createOrAttachScoreJob = createOrAttachScoreJob;
 const getScoreJob = (jobId) => {
+    const { jobs } = getRuntimeState();
     cleanupJobs();
     const job = jobs.get(jobId);
     if (!job) {
@@ -228,6 +240,7 @@ const getScoreJob = (jobId) => {
 };
 exports.getScoreJob = getScoreJob;
 const clearScoreJobs = () => {
+    const { jobs, activeByUsername } = getRuntimeState();
     jobs.clear();
     activeByUsername.clear();
 };

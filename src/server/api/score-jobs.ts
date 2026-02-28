@@ -53,11 +53,28 @@ type InternalScoreJob = {
   updatedAt: string
 }
 
+type ScoreJobRuntimeState = {
+  jobs: Map<string, InternalScoreJob>
+  activeByUsername: Map<string, string>
+}
+
 const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000
 const JOB_RETENTION_MS = 30 * 60 * 1000
 
-const jobs = new Map<string, InternalScoreJob>()
-const activeByUsername = new Map<string, string>()
+const getRuntimeState = (): ScoreJobRuntimeState => {
+  const globalState = globalThis as typeof globalThis & {
+    __aysScoreJobsState?: ScoreJobRuntimeState
+  }
+
+  if (!globalState.__aysScoreJobsState) {
+    globalState.__aysScoreJobsState = {
+      jobs: new Map<string, InternalScoreJob>(),
+      activeByUsername: new Map<string, string>(),
+    }
+  }
+
+  return globalState.__aysScoreJobsState
+}
 
 const emptyCoverage: ScoreCoverage = {
   commits_discovered: 0,
@@ -93,6 +110,7 @@ const touch = (job: InternalScoreJob) => {
 }
 
 const cleanupJobs = () => {
+  const { jobs, activeByUsername } = getRuntimeState()
   const cutoff = Date.now() - JOB_RETENTION_MS
   for (const [jobId, job] of jobs) {
     const updatedAt = new Date(job.updatedAt).getTime()
@@ -136,6 +154,7 @@ const mapError = (error: unknown): ScoreJobError => {
 }
 
 const runScoreJob = async (jobId: string) => {
+  const { jobs, activeByUsername } = getRuntimeState()
   const job = jobs.get(jobId)
   if (!job) {
     return
@@ -205,6 +224,7 @@ const runScoreJob = async (jobId: string) => {
 }
 
 export const createOrAttachScoreJob = (usernameRaw: string) => {
+  const { jobs, activeByUsername } = getRuntimeState()
   cleanupJobs()
 
   const username = usernameRaw.trim()
@@ -292,6 +312,7 @@ export const createOrAttachScoreJob = (usernameRaw: string) => {
 }
 
 export const getScoreJob = (jobId: string) => {
+  const { jobs } = getRuntimeState()
   cleanupJobs()
   const job = jobs.get(jobId)
   if (!job) {
@@ -301,6 +322,7 @@ export const getScoreJob = (jobId: string) => {
 }
 
 export const clearScoreJobs = () => {
+  const { jobs, activeByUsername } = getRuntimeState()
   jobs.clear()
   activeByUsername.clear()
 }

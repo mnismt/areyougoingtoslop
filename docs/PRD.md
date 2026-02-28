@@ -1,7 +1,7 @@
 # areyougoingslop — Product Requirements Document
 
 ## Status
-Draft v0.2 (MVP scoped)
+Draft v0.3 (MVP scoped)
 
 ## 1) Product Overview
 **areyougoingslop** is a viral web app that estimates how AI-assisted a GitHub user’s **public** contributions are and presents a humorous **Slop Score (0–100)** with tiered roast copy.
@@ -14,6 +14,7 @@ Positioning: **playful + directionally credible**, not forensic proof.
 
 ### Primary Goals
 - Generate a score for a GitHub username in <10s (p95 target for cached-or-warm paths).
+- Show a useful partial result quickly while full analysis continues.
 - Produce a funny, screenshot-worthy result card.
 - Show clear "why" behind score (signal breakdown).
 
@@ -41,10 +42,10 @@ Positioning: **playful + directionally credible**, not forensic proof.
 
 ## 5) User Flow
 1. User enters GitHub username.
-2. Backend fetches recent public activity.
-3. Scoring engine computes score + tier + confidence + reasons.
-4. UI renders result page and share card.
-5. Optional: result is indexed in public leaderboard.
+2. UI loads `/u/[username]` with skeletons and starts `POST /api/score/[username]/jobs`.
+3. Backend runs ingestion + scoring asynchronously and returns progressive snapshots via polling (`GET /api/score/jobs/[jobId]`).
+4. UI renders partial progress/coverage first, then final score + share card.
+5. Optional: final result is indexed in public leaderboard.
 
 ---
 
@@ -90,11 +91,15 @@ This keeps score reflective of current behavior rather than old habits.
 ## 7) Functional Requirements
 - Username input + validation.
 - GitHub fetch service for user recent public activity.
-- Scoring endpoint returning full output contract.
+- Async score-job APIs:
+  - `POST /api/score/[username]/jobs` (create/attach)
+  - `GET /api/score/jobs/[jobId]` (poll snapshot)
+- Legacy scoring endpoint `GET /api/score/[username]` remains supported.
 - Result page `/u/[username]`.
+- Progressive loading UI (stage/progress/coverage/limits) with skeletons.
 - Public leaderboard page.
 - Shareable OG image generation.
-- Basic caching and rate limiting.
+- Basic caching, queue-backed GitHub request reliability, and rate limiting.
 
 ---
 
@@ -116,6 +121,7 @@ This keeps score reflective of current behavior rather than old habits.
 
 ## 10) Success Metrics
 - p95 score time <10s (with cache strategy).
+- p95 time to first useful partial result <2.5s on warm paths.
 - Share rate (results shared / searches).
 - Return users (7-day).
 - Leaderboard visits.

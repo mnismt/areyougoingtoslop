@@ -8,7 +8,7 @@ const GET = async (_request, { params }) => {
     const snapshot = (0, score_jobs_1.getScoreJob)(jobId);
     if (!snapshot) {
         return server_1.NextResponse.json({
-            error: 'not_found',
+            error: 'job_not_found',
             message: 'Score job not found.',
         }, { status: 404 });
     }

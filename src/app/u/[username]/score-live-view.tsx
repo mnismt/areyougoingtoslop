@@ -54,14 +54,24 @@ type ScoreJobSnapshot = {
   coverage: ScoreCoverage
   limits: ScoreLimits
   error: {
-    code: 'invalid_username' | 'not_found' | 'rate_limited' | 'server_error'
+    code:
+      | 'invalid_username'
+      | 'not_found'
+      | 'job_not_found'
+      | 'rate_limited'
+      | 'server_error'
     message: string
     reset_at?: string
   } | null
 }
 
 type ScoreJobErrorPayload = {
-  error: 'invalid_username' | 'not_found' | 'rate_limited' | 'server_error'
+  error:
+    | 'invalid_username'
+    | 'not_found'
+    | 'job_not_found'
+    | 'rate_limited'
+    | 'server_error'
   message: string
   reset_at?: string
 }
@@ -149,6 +159,14 @@ const mapErrorToState = (snapshot: ScoreJobSnapshot | null) => {
       title: 'User not found',
       description:
         "We couldn't find that GitHub account. Double-check the spelling and try again.",
+    }
+  }
+
+  if (snapshot.error.code === 'job_not_found') {
+    return {
+      title: 'Score expired',
+      description:
+        'That score job is no longer available. Start a fresh scan and try again.',
     }
   }
 

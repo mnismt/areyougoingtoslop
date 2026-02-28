@@ -11,7 +11,7 @@ export const GET = async (_request: Request, { params }: Params) => {
   if (!snapshot) {
     return NextResponse.json(
       {
-        error: 'not_found',
+        error: 'job_not_found',
         message: 'Score job not found.',
       },
       { status: 404 },
