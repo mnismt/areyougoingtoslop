@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const sanitizeUsername = (value: string) => value.trim().replace(/^@+/, '')
 
@@ -26,24 +28,21 @@ export default function UsernameForm() {
       onSubmit={handleSubmit}
       className="flex w-full flex-col gap-2 text-left"
     >
-      <label className="font-mono text-xs text-[var(--muted)]">
+      <label className="font-mono text-xs text-muted-foreground">
         GitHub username
       </label>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <input
+        <Input
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           placeholder="octocat"
-          className="h-12 w-full flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 text-base text-[var(--foreground)] placeholder:text-gray-400 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
+          className="h-12 flex-1 rounded-xl"
         />
-        <button
-          type="submit"
-          className="h-12 rounded-xl bg-[var(--accent)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
-        >
+        <Button type="submit" className="h-12 rounded-xl px-6">
           Score me
-        </button>
+        </Button>
       </div>
-      {error ? <p className="text-sm text-[var(--accent)]">{error}</p> : null}
+      {error ? <p className="text-sm text-primary">{error}</p> : null}
     </form>
   )
 }

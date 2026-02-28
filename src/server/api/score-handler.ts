@@ -143,13 +143,15 @@ export const createScoreHandler = (
           { status: 400 },
         )
       }
-      return NextResponse.json(
-        {
-          error: 'server_error',
-          message: 'Unable to compute score right now.',
-        },
-        { status: 500 },
-      )
+      const body: Record<string, unknown> = {
+        error: 'server_error',
+        message: 'Unable to compute score right now.',
+      }
+      if (process.env.NODE_ENV === 'development' && error instanceof Error) {
+        body.dev_message = error.message
+        body.dev_stack = error.stack
+      }
+      return NextResponse.json(body, { status: 500 })
     }
   }
 }

@@ -4,6 +4,21 @@ export {
   GitHubRateLimitError,
   GitHubValidationError,
 } from './errors'
-export { fetchUserActivity } from './ingestion'
-export type { GitHubCommit, GitHubEvent, GitHubUser } from './types'
+export type {
+  FetchUserActivityCoverage,
+  FetchUserActivityLimits,
+  FetchUserActivityProgress,
+  FetchUserActivityResult,
+} from './ingestion'
+export {
+  fetchUserActivity,
+  fetchUserActivityWithMetadata,
+} from './ingestion'
+export type {
+  GitHubCommit,
+  GitHubCommitSummary,
+  GitHubEvent,
+  GitHubRepo,
+  GitHubUser,
+} from './types'
 export { isValidGitHubUsername } from './validation'

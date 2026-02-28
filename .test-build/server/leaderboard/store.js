@@ -6,11 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLeaderboard = exports.upsertLeaderboardEntry = void 0;
 const node_fs_1 = require("node:fs");
 const node_path_1 = __importDefault(require("node:path"));
-const DEFAULT_STORAGE_PATH = process.env.LEADERBOARD_STORAGE_PATH ?? ".data/leaderboard.json";
+const DEFAULT_STORAGE_PATH = process.env.LEADERBOARD_STORAGE_PATH ?? '.data/leaderboard.json';
 const DEFAULT_MAX_ENTRIES = 200;
 const DEFAULT_MIN_UPDATE_INTERVAL_MINUTES = 10;
 const DEFAULT_LIMIT = 50;
-const DEFAULT_CONFIDENCE_FLOOR = "medium";
+const DEFAULT_CONFIDENCE_FLOOR = 'medium';
 const confidenceRank = {
     low: 0,
     medium: 1,
@@ -20,7 +20,9 @@ const resolveStoragePath = (storagePath) => node_path_1.default.resolve(storageP
 let writeLock = Promise.resolve();
 const withLock = async (fn) => {
     let release;
-    const acquired = new Promise((resolve) => { release = resolve; });
+    const acquired = new Promise((resolve) => {
+        release = resolve;
+    });
     const previous = writeLock;
     writeLock = acquired;
     await previous;
@@ -33,7 +35,7 @@ const withLock = async (fn) => {
 };
 const loadState = async (storagePath) => {
     try {
-        const raw = await node_fs_1.promises.readFile(storagePath, "utf-8");
+        const raw = await node_fs_1.promises.readFile(storagePath, 'utf-8');
         const parsed = JSON.parse(raw);
         if (!parsed || !Array.isArray(parsed.entries)) {
             return { entries: [] };
@@ -41,10 +43,12 @@ const loadState = async (storagePath) => {
         return parsed;
     }
     catch (err) {
-        if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+        if (err instanceof Error &&
+            'code' in err &&
+            err.code === 'ENOENT') {
             return { entries: [] };
         }
-        console.warn("Failed to load leaderboard state:", err);
+        console.warn('Failed to load leaderboard state:', err);
         throw err;
     }
 };
@@ -104,9 +108,7 @@ const getLeaderboard = async (options = {}) => {
     const filtered = sortEntries([...state.entries]).filter((entry) => confidenceRank[entry.confidence] >= confidenceRank[confidenceFloor]);
     return {
         entries: filtered.slice(0, limit),
-        updated_at: filtered[0]?.last_scored_at ??
-            state.entries[0]?.last_scored_at ??
-            null,
+        updated_at: filtered[0]?.last_scored_at ?? state.entries[0]?.last_scored_at ?? null,
     };
 };
 exports.getLeaderboard = getLeaderboard;

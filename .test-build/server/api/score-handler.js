@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createScoreHandler = void 0;
-const server_1 = require("next/server");
 const node_perf_hooks_1 = require("node:perf_hooks");
-const score_1 = require("./score");
-const leaderboard_1 = require("../leaderboard");
+const server_1 = require("next/server");
 const cache_1 = require("../cache");
-const rate_limit_1 = require("../rate-limit");
-const metrics_1 = require("../perf/metrics");
 const github_1 = require("../github");
+const leaderboard_1 = require("../leaderboard");
+const metrics_1 = require("../perf/metrics");
+const rate_limit_1 = require("../rate-limit");
+const score_1 = require("./score");
 const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MAX = 30;
@@ -17,12 +17,12 @@ const rateLimiter = new rate_limit_1.MemoryRateLimiter({
     maxRequests: DEFAULT_RATE_LIMIT_MAX,
 });
 const getClientKey = (request) => {
-    const forwarded = request.headers.get("x-forwarded-for");
+    const forwarded = request.headers.get('x-forwarded-for');
     if (forwarded) {
-        return forwarded.split(",")[0]?.trim() ?? "unknown";
+        return forwarded.split(',')[0]?.trim() ?? 'unknown';
     }
-    const realIp = request.headers.get("x-real-ip");
-    return realIp ?? "unknown";
+    const realIp = request.headers.get('x-real-ip');
+    return realIp ?? 'unknown';
 };
 const createScoreHandler = (scorer = score_1.scoreUser, options = {}) => {
     const limiter = options.rateLimit
@@ -31,7 +31,7 @@ const createScoreHandler = (scorer = score_1.scoreUser, options = {}) => {
     return async (request, context) => {
         const { username } = await context.params;
         if (!(0, github_1.isValidGitHubUsername)(username)) {
-            return server_1.NextResponse.json({ error: "invalid_username", message: "Invalid GitHub username." }, { status: 400 });
+            return server_1.NextResponse.json({ error: 'invalid_username', message: 'Invalid GitHub username.' }, { status: 400 });
         }
         const now = options.now ?? new Date();
         if (options.enableRateLimit !== false) {
@@ -39,8 +39,8 @@ const createScoreHandler = (scorer = score_1.scoreUser, options = {}) => {
             const limitResult = limiter.check(key, now.getTime());
             if (!limitResult.allowed) {
                 return server_1.NextResponse.json({
-                    error: "rate_limited",
-                    message: "Too many requests. Slow down and try again.",
+                    error: 'rate_limited',
+                    message: 'Too many requests. Slow down and try again.',
                     reset_at: new Date(limitResult.resetAt).toISOString(),
                 }, { status: 429 });
             }
@@ -52,7 +52,7 @@ const createScoreHandler = (scorer = score_1.scoreUser, options = {}) => {
                     return server_1.NextResponse.json(cached, {
                         status: 200,
                         headers: {
-                            "x-cache": "hit",
+                            'x-cache': 'hit',
                         },
                     });
                 }
@@ -75,7 +75,7 @@ const createScoreHandler = (scorer = score_1.scoreUser, options = {}) => {
                 const ttlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
                 (0, cache_1.setCachedScore)(username, result, now, ttlMs);
             }
-            console.info("score_request", {
+            console.info('score_request', {
                 username,
                 duration_ms: Math.round(durationMs),
                 p95_ms: p95 ? Math.round(p95) : null,
@@ -84,22 +84,27 @@ const createScoreHandler = (scorer = score_1.scoreUser, options = {}) => {
         }
         catch (error) {
             if (error instanceof github_1.GitHubNotFoundError) {
-                return server_1.NextResponse.json({ error: "not_found", message: "GitHub user not found." }, { status: 404 });
+                return server_1.NextResponse.json({ error: 'not_found', message: 'GitHub user not found.' }, { status: 404 });
             }
             if (error instanceof github_1.GitHubRateLimitError) {
                 return server_1.NextResponse.json({
-                    error: "rate_limited",
-                    message: "GitHub API rate limit exceeded.",
+                    error: 'rate_limited',
+                    message: 'GitHub API rate limit exceeded.',
                     reset_at: error.resetAt,
                 }, { status: 429 });
             }
             if (error instanceof github_1.GitHubValidationError) {
-                return server_1.NextResponse.json({ error: "invalid_username", message: error.message }, { status: 400 });
+                return server_1.NextResponse.json({ error: 'invalid_username', message: error.message }, { status: 400 });
             }
-            return server_1.NextResponse.json({
-                error: "server_error",
-                message: "Unable to compute score right now.",
-            }, { status: 500 });
+            const body = {
+                error: 'server_error',
+                message: 'Unable to compute score right now.',
+            };
+            if (process.env.NODE_ENV === 'development' && error instanceof Error) {
+                body.dev_message = error.message;
+                body.dev_stack = error.stack;
+            }
+            return server_1.NextResponse.json(body, { status: 500 });
         }
     };
 };

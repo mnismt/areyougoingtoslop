@@ -8,6 +8,15 @@ export type GitHubEventRepo = {
   name: string
 }
 
+export type GitHubRepo = {
+  full_name: string
+  fork: boolean
+  pushed_at: string
+  archived?: boolean
+  disabled?: boolean
+  private?: boolean
+}
+
 export type GitHubEvent = {
   id: string
   type: string
@@ -20,6 +29,8 @@ export type GitHubEvent = {
     }>
     ref?: string
     size?: number
+    head?: string
+    before?: string
   }
 }
 
@@ -41,4 +52,17 @@ export type GitHubCommit = {
     total: number
   }
   files?: GitHubCommitFile[]
+}
+
+export type GitHubCommitSummary = {
+  sha: string
+  commit: {
+    message: string
+    author?: {
+      date?: string
+    }
+    committer?: {
+      date?: string
+    }
+  }
 }

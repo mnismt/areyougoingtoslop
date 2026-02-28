@@ -1,20 +1,58 @@
+import { Skeleton } from '@/components/ui/skeleton'
+
 export default function Loading() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-16">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 animate-rise">
-        <p className="font-mono text-xs text-[var(--muted)]">Calculating</p>
-        <p className="mt-4 text-lg text-[var(--muted)]">
-          Scanning commit vibes... sniffing for copilot...
-        </p>
+      <div className="rounded-xl border border-border bg-card p-5 animate-rise">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="mt-4 h-2 w-full rounded-full" />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-44" />
+        </div>
       </div>
+
+      <div className="rounded-xl border border-border bg-card p-8 animate-rise">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-14 w-14 rounded-full" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center">
+          <Skeleton className="h-44 w-full max-w-[220px] rounded-xl" />
+          <div className="flex flex-1 flex-col gap-3">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-9 w-36" />
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div
-            key={`loading-${index}`}
-            className="h-24 rounded-xl border border-[var(--border)] bg-[var(--card)] animate-rise"
-            style={{ animationDelay: `${index * 80}ms` }}
-          />
+        {['one', 'two', 'three'].map((slot) => (
+          <Skeleton key={`loading-${slot}`} className="h-24 rounded-xl" />
         ))}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-6 animate-rise">
+        <Skeleton className="h-4 w-40" />
+        <div className="mt-4 flex flex-col gap-3">
+          {['a', 'b', 'c'].map((slot) => (
+            <Skeleton
+              key={`commit-${slot}`}
+              className="h-20 w-full rounded-lg"
+            />
+          ))}
+        </div>
       </div>
     </main>
   )

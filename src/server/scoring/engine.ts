@@ -22,6 +22,8 @@ const PROMPT_CRUMBS = [
   "i can't",
 ]
 
+const MAX_ANALYZED_COMMITS = 200
+
 export type SignalResult = {
   key: string
   label: string
@@ -30,12 +32,23 @@ export type SignalResult = {
   contribution: number
 }
 
+export type AnalyzedCommit = {
+  sha: string
+  repo: string
+  message: string
+  occurred_at: string
+  additions?: number
+  deletions?: number
+  flags: string[]
+}
+
 export type SlopScoreResult = {
   slop_score: number
   tier: string
   confidence: 'low' | 'medium' | 'high'
   top_signals: string[]
   scoring_window: string
+  analyzed_commits: AnalyzedCommit[]
 }
 
 const clamp = (value: number, min = 0, max = 100) =>
@@ -239,11 +252,36 @@ export const computeSlopScore = (
     topSignals.push('Low signal density in the recent activity window')
   }
 
+  const aiKeywordShas = new Set(aiKeywordMatches.map((m) => m.event.sha))
+  const promptCrumbShas = new Set(promptCrumbMatches.map((m) => m.event.sha))
+  const largeGenericShas = new Set(largeGenericMatches.map((m) => m.event.sha))
+  const churnShas = new Set(churnMatches.map((m) => m.event.sha))
+
+  const analyzedCommits: AnalyzedCommit[] = weightedEvents
+    .slice(0, MAX_ANALYZED_COMMITS)
+    .map((item) => {
+      const flags: string[] = []
+      if (aiKeywordShas.has(item.event.sha)) flags.push('ai_keyword')
+      if (promptCrumbShas.has(item.event.sha)) flags.push('prompt_crumb')
+      if (largeGenericShas.has(item.event.sha)) flags.push('large_generic')
+      if (churnShas.has(item.event.sha)) flags.push('high_churn')
+      return {
+        sha: item.event.sha,
+        repo: item.event.repo,
+        message: item.event.message.slice(0, 200),
+        occurred_at: item.event.occurredAt,
+        additions: item.event.additions,
+        deletions: item.event.deletions,
+        flags,
+      }
+    })
+
   return {
     slop_score: slopScore,
     tier,
     confidence,
     top_signals: topSignals,
     scoring_window: 'last 180 days',
+    analyzed_commits: analyzedCommits,
   }
 }

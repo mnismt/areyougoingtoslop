@@ -7,10 +7,10 @@ const isValidGitHubUsername = (username) => {
     if (!USERNAME_REGEX.test(username)) {
         return false;
     }
-    if (username.endsWith("-")) {
+    if (username.endsWith('-')) {
         return false;
     }
-    if (username.includes("--")) {
+    if (username.includes('--')) {
         return false;
     }
     return true;
@@ -18,7 +18,7 @@ const isValidGitHubUsername = (username) => {
 exports.isValidGitHubUsername = isValidGitHubUsername;
 const assertValidGitHubUsername = (username) => {
     if (!(0, exports.isValidGitHubUsername)(username)) {
-        throw new errors_1.GitHubValidationError("Invalid GitHub username format");
+        throw new errors_1.GitHubValidationError('Invalid GitHub username format');
     }
 };
 exports.assertValidGitHubUsername = assertValidGitHubUsername;

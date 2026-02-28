@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { COLORS } from '@/lib/colors'
 
 type OgCardProps = {
   title: string
@@ -10,9 +11,9 @@ type OgCardProps = {
 }
 
 const scoreColor = (score: number) => {
-  if (score <= 30) return '#22c55e'
-  if (score <= 70) return '#eab308'
-  return '#ef4444'
+  if (score <= 30) return COLORS.slopGreen
+  if (score <= 70) return COLORS.slopYellow
+  return COLORS.slopRed
 }
 
 export const renderOgCard = ({
@@ -29,9 +30,8 @@ export const renderOgCard = ({
         display: 'flex',
         height: '100%',
         width: '100%',
-        background:
-          'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 50%, #fafaf9 100%)',
-        color: '#1a1a1a',
+        background: `linear-gradient(135deg, ${COLORS.background} 0%, #f5f5f4 50%, ${COLORS.background} 100%)`,
+        color: COLORS.foreground,
         fontFamily: '"Inter","Helvetica Neue","Arial",sans-serif',
         padding: '56px',
         boxSizing: 'border-box',
@@ -49,7 +49,7 @@ export const renderOgCard = ({
           <p
             style={{
               fontSize: 18,
-              color: '#6b7280',
+              color: COLORS.muted,
               margin: 0,
               fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
             }}
@@ -66,7 +66,7 @@ export const renderOgCard = ({
           >
             {title}
           </h1>
-          <p style={{ fontSize: 22, margin: 0, color: '#6b7280' }}>
+          <p style={{ fontSize: 22, margin: 0, color: COLORS.muted }}>
             {subtitle}
           </p>
         </div>
@@ -77,7 +77,7 @@ export const renderOgCard = ({
               gap: '16px',
               alignItems: 'center',
               fontSize: 20,
-              color: '#6b7280',
+              color: COLORS.muted,
             }}
           >
             @{username}
@@ -93,14 +93,14 @@ export const renderOgCard = ({
           alignItems: 'center',
           gap: '16px',
           borderRadius: '20px',
-          background: '#ffffff',
-          border: '1px solid #e5e7eb',
+          background: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
         }}
       >
         <p
           style={{
             fontSize: 14,
-            color: '#6b7280',
+            color: COLORS.muted,
             margin: 0,
             fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
           }}
@@ -111,7 +111,7 @@ export const renderOgCard = ({
           style={{
             fontSize: 72,
             margin: 0,
-            color: score != null ? scoreColor(score) : '#e11d48',
+            color: score != null ? scoreColor(score) : COLORS.primary,
             fontWeight: 700,
             fontFamily: '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
           }}
@@ -131,7 +131,7 @@ export const renderOgCard = ({
             style={{
               margin: 0,
               fontSize: 18,
-              color: '#1a1a1a',
+              color: COLORS.foreground,
               textAlign: 'center',
               fontWeight: 600,
             }}
@@ -143,7 +143,7 @@ export const renderOgCard = ({
               style={{
                 margin: 0,
                 fontSize: 14,
-                color: '#6b7280',
+                color: COLORS.muted,
                 fontFamily:
                   '"JetBrains Mono","SFMono-Regular","Menlo",monospace',
               }}

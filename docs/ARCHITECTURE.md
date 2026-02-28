@@ -7,16 +7,25 @@ How the server-side logic works, end to end.
 ## Request Flow
 
 ```
+GET /u/[username]
+  → render shell + skeletons
+  → POST /api/score/[username]/jobs
+  → poll GET /api/score/jobs/[jobId] every ~1.2s
+  → progressive snapshots (discovering → enriching → finalizing)
+  → final score + coverage details
+
+Legacy endpoint (still supported):
 GET /api/score/[username]
   → rate-limit check (IP-based, 30 req / 10 min)
   → cache lookup (in-memory, 12h TTL, max 1000 entries)
-  → fetchUserActivity()        ← GitHub ingestion
-  → computeSlopScore()         ← scoring engine
-  → upsert leaderboard         ← JSON file storage
+  → fetchUserActivity() + computeSlopScore()
+  → upsert leaderboard
   → cache write + return
 ```
 
-Entrypoint: `src/server/api/score-handler.ts` → calls `src/server/api/score.ts`
+Entrypoints:
+- `src/server/api/score-handler.ts` (legacy synchronous API)
+- `src/server/api/score-jobs.ts` (phase-1 async jobs + polling snapshots)
 
 ---
 
@@ -30,12 +39,15 @@ Fetches the last **180 days** of a user's public activity via GitHub REST API.
 | **Fetch events** | `GET /users/:name/events/public` — up to 5 pages (100/page) |
 | **Filter** | Keep only `PushEvent` within 180-day window |
 | **Normalize** | Extract individual commits from push payloads → `ContributionEvent[]` |
-| **Enrich** | Fetch commit details (`GET /repos/:repo/commits/:sha`) for stats — up to 30 commits, 5 concurrent |
+| **Expand repos** | `GET /users/:name/repos` and enumerate repo commits by `author + since/until` |
+| **Dedupe** | Merge event-derived and repo-derived commits by `repo:sha` |
+| **Enrich** | Fetch commit details (`GET /repos/:repo/commits/:sha`) for stats — up to 120 commits with token (30 without), 5 concurrent |
 
 ### Error handling
 - `GitHubNotFoundError` → 404 to client
 - `GitHubRateLimitError` → 429 to client, stops enrichment early
 - Retries on 502/503/504 (up to 2 retries, exponential backoff)
+- Events pagination limit (`422`) is handled gracefully and exposed as a limitation flag
 
 ### Core type: `ContributionEvent`
 ```ts
@@ -117,6 +129,40 @@ Based on data density:
   confidence: 'low' | 'medium' | 'high'
   top_signals: string[]     // up to 3 human-readable reasons
   scoring_window: string    // "last 180 days"
+  analyzed_commits: Array<{
+    sha: string
+    repo: string
+    message: string
+    occurred_at: string
+    additions?: number
+    deletions?: number
+    flags: string[]
+  }>
+}
+```
+
+### 2.7 Async Job Snapshot Contract (Phase 1)
+```ts
+{
+  job_id: string
+  username: string
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  stage: 'queued' | 'discovering' | 'enriching' | 'finalizing'
+  progress_percent: number
+  result: SlopScoreResult | null
+  coverage: {
+    commits_discovered: number
+    commits_enriched: number
+    repos_scanned: number
+    repos_total: number
+    window_days: number
+    is_partial: boolean
+    sources_used: string[]
+  }
+  limits: {
+    rate_limited: boolean
+    events_pagination_limited: boolean
+  }
 }
 ```
 
@@ -131,6 +177,8 @@ In-memory `Map<string, CacheEntry>` keyed by lowercase username.
 | TTL | 12 hours |
 | Max size | 1,000 entries |
 | Eviction | Expired entries first, then LRU by expiry time |
+
+Also includes an in-memory commit artifact cache (`repo:sha`) for commit-detail enrichment reuse.
 
 ---
 

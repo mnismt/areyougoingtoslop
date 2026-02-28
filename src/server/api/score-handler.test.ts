@@ -13,6 +13,7 @@ describe('score handler', () => {
         confidence: 'medium',
         top_signals: ['Commit messages mention AI tools'],
         scoring_window: 'last 180 days',
+        analyzed_commits: [],
       }),
       {
         recordLeaderboard: false,
@@ -39,6 +40,7 @@ describe('score handler', () => {
         confidence: 'low',
         top_signals: ['Low signal density in the recent activity window'],
         scoring_window: 'last 180 days',
+        analyzed_commits: [],
       }),
       {
         recordLeaderboard: false,
@@ -86,6 +88,7 @@ describe('score handler', () => {
         confidence: 'low',
         top_signals: ['Low signal density in the recent activity window'],
         scoring_window: 'last 180 days',
+        analyzed_commits: [],
       }),
       {
         recordLeaderboard: false,
@@ -122,6 +125,7 @@ describe('score handler', () => {
           confidence: 'medium',
           top_signals: ['Commit messages mention AI tools'],
           scoring_window: 'last 180 days',
+          analyzed_commits: [],
         }
       },
       {

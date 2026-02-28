@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { getLeaderboard } from '../server/leaderboard'
 import UsernameForm from './components/username-form'
 
@@ -16,9 +17,9 @@ export default async function Home() {
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-16 px-6 py-16">
       <section className="flex flex-col items-center gap-6 text-center animate-rise">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Are you going <span className="text-[var(--accent)]">slop</span>?
+          Are you going <span className="text-primary">slop</span>?
         </h1>
-        <p className="max-w-lg text-lg text-[var(--muted)]">
+        <p className="max-w-lg text-lg text-muted-foreground">
           Enter a GitHub username to measure their slop levels.
         </p>
         <div className="w-full max-w-md">
@@ -29,12 +30,12 @@ export default async function Home() {
       {leaderboard.entries.length > 0 && (
         <section className="flex flex-col gap-6 animate-rise animate-delay-1">
           <div className="flex items-center justify-between">
-            <h2 className="font-mono text-xs text-[var(--muted)]">
+            <h2 className="font-mono text-xs text-muted-foreground">
               Top slop offenders
             </h2>
             <Link
               href="/leaderboard"
-              className="font-mono text-xs text-[var(--accent)] hover:underline"
+              className="font-mono text-xs text-primary hover:underline"
             >
               View all
             </Link>
@@ -44,19 +45,19 @@ export default async function Home() {
               <Link
                 key={entry.username}
                 href={`/u/${entry.username}`}
-                className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition hover:border-[var(--accent)] hover:shadow-sm"
+                className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-primary hover:shadow-sm"
               >
                 <Image
                   src={`https://github.com/${entry.username}.png`}
                   alt=""
                   width={40}
                   height={40}
-                  className="h-10 w-10 rounded-full bg-gray-100"
+                  className="h-10 w-10 rounded-full bg-muted"
                   unoptimized
                 />
                 <div className="flex flex-1 flex-col gap-0.5">
                   <span className="text-sm font-medium">@{entry.username}</span>
-                  <span className="font-mono text-xs text-[var(--muted)]">
+                  <span className="font-mono text-xs text-muted-foreground">
                     {entry.tier}
                   </span>
                 </div>
@@ -71,21 +72,22 @@ export default async function Home() {
         </section>
       )}
 
-      <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-[var(--muted)]">
+      <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
         <span>Satirical heuristic. Built for screenshots, not courtrooms.</span>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/how-it-works" className="hover:text-[var(--foreground)]">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/how-it-works" className="hover:text-foreground">
             How it works
           </Link>
-          <Link href="/feedback" className="hover:text-[var(--foreground)]">
+          <Link href="/feedback" className="hover:text-foreground">
             Feedback
           </Link>
-          <Link href="/terms" className="hover:text-[var(--foreground)]">
+          <Link href="/terms" className="hover:text-foreground">
             Terms
           </Link>
-          <Link href="/privacy" className="hover:text-[var(--foreground)]">
+          <Link href="/privacy" className="hover:text-foreground">
             Privacy
           </Link>
+          <ThemeToggle />
         </div>
       </footer>
     </main>

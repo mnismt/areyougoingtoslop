@@ -45,7 +45,7 @@ export default function SlopGauge({ score }: { score: number }) {
         <path
           d={describeArc(START_ANGLE, END_ANGLE)}
           fill="none"
-          stroke="#e5e7eb"
+          stroke="var(--border)"
           strokeWidth={STROKE}
           strokeLinecap="round"
         />
@@ -77,7 +77,7 @@ export default function SlopGauge({ score }: { score: number }) {
               y1={inner.y}
               x2={outer.x}
               y2={outer.y}
-              stroke="#d1d5db"
+              stroke="var(--border)"
               strokeWidth="1.5"
             />
           )
@@ -100,8 +100,8 @@ export default function SlopGauge({ score }: { score: number }) {
           x={CENTER_X - RADIUS - 2}
           y={CENTER_Y + 16}
           textAnchor="middle"
-          className="fill-[var(--muted)]"
-          style={{ fontSize: '7px', fontFamily: 'var(--font-mono)' }}
+          className="fill-muted-foreground"
+          style={{ fontSize: '7px', fontFamily: 'var(--font-mono-stack)' }}
         >
           artisan
         </text>
@@ -109,8 +109,8 @@ export default function SlopGauge({ score }: { score: number }) {
           x={CENTER_X + RADIUS + 2}
           y={CENTER_Y + 16}
           textAnchor="middle"
-          className="fill-[var(--muted)]"
-          style={{ fontSize: '7px', fontFamily: 'var(--font-mono)' }}
+          className="fill-muted-foreground"
+          style={{ fontSize: '7px', fontFamily: 'var(--font-mono-stack)' }}
         >
           slop machine
         </text>
@@ -123,7 +123,7 @@ export default function SlopGauge({ score }: { score: number }) {
         >
           {score}
         </span>
-        <span className="font-mono text-xs text-[var(--muted)]">
+        <span className="font-mono text-xs text-muted-foreground">
           slop score
         </span>
       </div>

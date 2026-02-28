@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 export default function FeedbackForm() {
   const [message, setMessage] = useState('')
@@ -37,30 +39,25 @@ export default function FeedbackForm() {
       onSubmit={handleSubmit}
       className="flex w-full flex-col gap-4 text-left"
     >
-      <label className="font-mono text-xs text-[var(--muted)]">
+      <label className="font-mono text-xs text-muted-foreground">
         Your feedback
       </label>
-      <textarea
+      <Textarea
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         rows={5}
         placeholder="Tell us what felt fair, what felt off, and what to fix next."
-        className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] placeholder:text-gray-400 outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
+        className="rounded-xl"
       />
-      <button
-        type="submit"
-        className="h-11 rounded-xl bg-[var(--accent)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
-      >
+      <Button type="submit" className="h-11 rounded-xl">
         {status === 'sending'
           ? 'Sending...'
           : status === 'sent'
             ? 'Thanks!'
             : 'Send feedback'}
-      </button>
+      </Button>
       {status === 'error' ? (
-        <p className="text-xs text-[var(--accent)]">
-          Something went wrong. Try again.
-        </p>
+        <p className="text-xs text-primary">Something went wrong. Try again.</p>
       ) : null}
     </form>
   )

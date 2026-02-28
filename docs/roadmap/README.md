@@ -19,6 +19,7 @@ This folder tracks implementation planning at the **epic level**.
 - [ ] [Epic 08 — Safety, Transparency, and Policy](./epic-08-safety-transparency.md)
 - [ ] [Epic 09 — Performance & Reliability](./epic-09-performance-reliability.md)
 - [ ] [Epic 10 — Launch Readiness](./epic-10-launch-readiness.md)
+- [~] [Epic 11 — Coverage-First Ingestion + Streaming UX](./epic-11-coverage-streaming.md)
 
 ## Milestones
 ### Milestone A (Buildable MVP)
@@ -29,6 +30,9 @@ Epics: 6, 7
 
 ### Milestone C (Harden + Launch)
 Epics: 9, 10
+
+### Milestone D (Scale Coverage + UX Smoothness)
+Epics: 11
 
 ## Notes
 - `docs/EPICS_AND_TICKETS.md` remains as a consolidated snapshot.

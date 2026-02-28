@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 type ShareActionsProps = {
   username: string
@@ -65,28 +66,28 @@ export default function ShareActions({ username }: ShareActionsProps) {
 
   return (
     <div className="flex flex-wrap gap-3">
-      <button
-        type="button"
+      <Button
+        variant="outline"
         onClick={handleCopy}
-        className="rounded-lg border border-[var(--border)] px-4 py-2 font-mono text-xs text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+        className="font-mono text-xs"
       >
         {copyState === 'done'
           ? 'Link copied'
           : copyState === 'error'
             ? 'Copy failed'
             : 'Copy link'}
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="outline"
         onClick={handleDownload}
-        className="rounded-lg border border-[var(--border)] px-4 py-2 font-mono text-xs text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+        className="font-mono text-xs"
       >
         {downloadState === 'done'
           ? 'Card saved'
           : downloadState === 'busy'
             ? 'Saving...'
             : 'Download card'}
-      </button>
+      </Button>
     </div>
   )
 }

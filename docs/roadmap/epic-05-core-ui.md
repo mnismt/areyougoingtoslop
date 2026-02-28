@@ -19,6 +19,7 @@ Build the end-to-end user experience from username input to results.
 - [ ] Render signal breakdown cards ("why this score")
 - [ ] Render confidence badge + scoring window label
 - [ ] Add empty/error states for low/no data users
+- [x] Add analyzed commits pagination (20/page) + flagged-only filter toggle (`commit-list.tsx`)
 
 ## Dependencies
 - Epic 04 score API.

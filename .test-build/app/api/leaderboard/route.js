@@ -5,7 +5,7 @@ const server_1 = require("next/server");
 const leaderboard_1 = require("../../../server/leaderboard");
 const GET = async (request) => {
     const { searchParams } = new URL(request.url);
-    const limitParam = Number(searchParams.get("limit"));
+    const limitParam = Number(searchParams.get('limit'));
     const limit = Number.isFinite(limitParam)
         ? Math.min(Math.max(limitParam, 1), 100)
         : undefined;
