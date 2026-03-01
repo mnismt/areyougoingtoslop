@@ -307,3 +307,6 @@ export const getGitHubQueueSnapshot =
 
     return snapshot
   }
+
+// Exported for unit testing
+export { toNonNegativeInteger, parseDelayedRetryTimestamp }

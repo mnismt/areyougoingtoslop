@@ -673,7 +673,10 @@ const runDelayedSchedulerLoop = async (commandRedis: Redis) => {
   for (;;) {
     try {
       const peeked = (await commandRedis.zrange(
-        DELAYED_ZSET_KEY, 0, 0, 'WITHSCORES',
+        DELAYED_ZSET_KEY,
+        0,
+        0,
+        'WITHSCORES',
       )) as string[]
 
       if (peeked.length === 0) {
@@ -710,7 +713,15 @@ const runDelayedSchedulerLoop = async (commandRedis: Redis) => {
           continue
         }
 
-        await commandRedis.xadd(STREAM_KEY, 'MAXLEN', '~', MAX_STREAM_LEN.toString(), '*', 'job', payload)
+        await commandRedis.xadd(
+          STREAM_KEY,
+          'MAXLEN',
+          '~',
+          MAX_STREAM_LEN.toString(),
+          '*',
+          'job',
+          payload,
+        )
       }
     } catch (error) {
       console.warn('github_queue_scheduler_error', {
@@ -730,8 +741,12 @@ const runPendingReclaimLoop = async (
 ) => {
   for (;;) {
     try {
-      const pendingSummary = await commandRedis.xpending(STREAM_KEY, GROUP_NAME) as unknown[]
-      const pendingCount = typeof pendingSummary?.[0] === 'number' ? pendingSummary[0] : 0
+      const pendingSummary = (await commandRedis.xpending(
+        STREAM_KEY,
+        GROUP_NAME,
+      )) as unknown[]
+      const pendingCount =
+        typeof pendingSummary?.[0] === 'number' ? pendingSummary[0] : 0
       if (pendingCount === 0) {
         await delay(RECLAIM_IDLE_SLEEP_MS)
         continue
@@ -826,7 +841,10 @@ const ensureQueueWorkersStarted = async () => {
 
   // Cooldown: don't spam leader lock attempts on every request
   const now = Date.now()
-  if (state.leaderCheckAt > 0 && now - state.leaderCheckAt < LEADER_CHECK_INTERVAL_MS) {
+  if (
+    state.leaderCheckAt > 0 &&
+    now - state.leaderCheckAt < LEADER_CHECK_INTERVAL_MS
+  ) {
     return
   }
   state.leaderCheckAt = now
@@ -978,7 +996,15 @@ const enqueueAndWait = async <K extends GitHubQueueRequestKind>(
       )
     }
 
-    await commandRedis.xadd(STREAM_KEY, 'MAXLEN', '~', MAX_STREAM_LEN.toString(), '*', 'job', JSON.stringify(request))
+    await commandRedis.xadd(
+      STREAM_KEY,
+      'MAXLEN',
+      '~',
+      MAX_STREAM_LEN.toString(),
+      '*',
+      'job',
+      JSON.stringify(request),
+    )
     const state = getWorkerState()
     state.metrics.enqueued += 1
 
@@ -1030,3 +1056,14 @@ export const createQueuedGitHubClient = (options: GitHubRequestOptions) => ({
       options,
     ),
 })
+
+export {
+  parseQueueRequest,
+  parseStreamFieldsToRequest,
+  parseXReadResponse,
+  parseXAutoClaimResponse,
+  serializeQueueError,
+  restoreQueueError,
+  isRetryableError,
+  computeRetryDelayMs,
+}
