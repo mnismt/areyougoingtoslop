@@ -167,7 +167,7 @@ const InvestigationView = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
         </div>
         <div className="h-1 w-32 rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+            className="h-full rounded-full bg-primary transition-all duration-1000 ease-out"
             style={{ width: `${Math.max(3, progress)}%` }}
           />
         </div>
@@ -189,7 +189,7 @@ const InvestigationView = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
         </div>
         <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
           <div
-            className="h-1.5 rounded-full bg-primary transition-all duration-700 ease-out"
+            className="h-1.5 rounded-full bg-primary transition-all duration-1000 ease-out"
             style={{ width: `${Math.max(3, progress)}%` }}
           />
         </div>
@@ -345,7 +345,7 @@ const MiniProgress = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
           <div className="flex items-center gap-2">
             <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className={`h-full rounded-full ${progressColor} transition-all duration-500`}
+                className={`h-full rounded-full ${progressColor} transition-all duration-1000`}
                 style={{ width: `${Math.max(3, progress)}%` }}
               />
             </div>
@@ -416,7 +416,7 @@ const MiniProgress = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
       {/* Progress bar */}
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden mb-5">
         <div
-          className={`h-full rounded-full ${progressColor} transition-all duration-700 ease-out`}
+          className={`h-full rounded-full ${progressColor} transition-all duration-1000 ease-out`}
           style={{ width: `${Math.max(3, progress)}%` }}
         />
       </div>

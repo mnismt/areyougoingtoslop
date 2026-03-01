@@ -27,12 +27,17 @@ const scoreColor = (score: number) => {
 
 export default function SlopGauge({ score }: { score: number }) {
   const clamped = Math.max(0, Math.min(100, score))
-  const needleAngle = Math.PI - (clamped / 100) * Math.PI
-  const needleTip = polarToCartesian(needleAngle)
+  const arcLength = Math.PI * RADIUS
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 200 120" className="w-56">
+      <svg
+        viewBox="0 0 200 120"
+        className="w-56"
+        role="img"
+        aria-label="Slop Score Gauge"
+      >
+        <title>Slop Gauge</title>
         <defs>
           <linearGradient id="arc-gradient" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="var(--slop-green)" />
@@ -57,6 +62,14 @@ export default function SlopGauge({ score }: { score: number }) {
           stroke="url(#arc-gradient)"
           strokeWidth={STROKE}
           strokeLinecap="round"
+          style={
+            {
+              strokeDasharray: arcLength,
+              strokeDashoffset: 'var(--target-offset)',
+              animation: 'fill-arc 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              '--target-offset': arcLength - arcLength * (clamped / 100),
+            } as React.CSSProperties
+          }
         />
 
         {/* Tick marks */}
@@ -87,11 +100,18 @@ export default function SlopGauge({ score }: { score: number }) {
         <line
           x1={CENTER_X}
           y1={CENTER_Y}
-          x2={needleTip.x}
-          y2={needleTip.y}
+          x2={CENTER_X - RADIUS}
+          y2={CENTER_Y}
           stroke={scoreColor(clamped)}
           strokeWidth="2.5"
           strokeLinecap="round"
+          style={
+            {
+              transformOrigin: `${CENTER_X}px ${CENTER_Y}px`,
+              animation: 'sweep 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              '--target-angle': `${180 * (clamped / 100)}deg`,
+            } as React.CSSProperties
+          }
         />
         <circle cx={CENTER_X} cy={CENTER_Y} r="4" fill={scoreColor(clamped)} />
 

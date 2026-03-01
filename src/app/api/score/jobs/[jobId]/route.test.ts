@@ -5,7 +5,7 @@ import { GET } from './route'
 
 describe('score job by id route', () => {
   it('returns job_not_found when no snapshot exists', async () => {
-    clearScoreJobs()
+    await clearScoreJobs()
 
     const response = await GET(new Request('http://localhost'), {
       params: Promise.resolve({ jobId: 'missing-job-id' }),

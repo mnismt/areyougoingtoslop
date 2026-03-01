@@ -9,6 +9,10 @@ import {
 } from '../github'
 import { upsertLeaderboardEntry } from '../leaderboard'
 import { getScoreP95, recordScoreTiming } from '../perf/metrics'
+import {
+  getGitHubQueueCommandClient,
+  isGitHubRequestQueueEnabled,
+} from '../queue/github-request-queue'
 import type { SlopScoreResult } from '../scoring'
 import {
   type ScoreCoverage,
@@ -51,6 +55,7 @@ type InternalScoreJob = {
   error: ScoreJobError | null
   createdAt: string
   updatedAt: string
+  lastPersistedAt: number
 }
 
 type ScoreJobRuntimeState = {
@@ -60,6 +65,9 @@ type ScoreJobRuntimeState = {
 
 const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000
 const JOB_RETENTION_MS = 30 * 60 * 1000
+const SCORE_JOB_KEY_PREFIX = 'ays:score:job:'
+const SCORE_ACTIVE_KEY_PREFIX = 'ays:score:active:'
+const PROGRESS_DEBOUNCE_MS = 2_000
 
 const getRuntimeState = (): ScoreJobRuntimeState => {
   const globalState = globalThis as typeof globalThis & {
@@ -124,6 +132,66 @@ const cleanupJobs = () => {
   }
 }
 
+const getScoreJobRedis = () => {
+  if (!isGitHubRequestQueueEnabled()) return null
+  return getGitHubQueueCommandClient()
+}
+
+const persistJobToRedis = async (job: InternalScoreJob, force = false) => {
+  const redis = getScoreJobRedis()
+  if (!redis) return
+
+  const now = Date.now()
+  if (!force && now - job.lastPersistedAt < PROGRESS_DEBOUNCE_MS) return
+  job.lastPersistedAt = now
+
+  await redis.set(
+    `${SCORE_JOB_KEY_PREFIX}${job.jobId}`,
+    JSON.stringify(toSnapshot(job)),
+    'PX',
+    JOB_RETENTION_MS,
+  )
+}
+
+const setActiveJobInRedis = async (username: string, jobId: string) => {
+  const redis = getScoreJobRedis()
+  if (!redis) return
+  await redis.set(
+    `${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`,
+    jobId,
+    'PX',
+    JOB_RETENTION_MS,
+  )
+}
+
+const clearActiveJobInRedis = async (username: string, jobId: string) => {
+  const redis = getScoreJobRedis()
+  if (!redis) return
+  const key = `${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`
+  const current = await redis.get(key)
+  if (current === jobId) {
+    await redis.del(key)
+  }
+}
+
+const getActiveJobIdFromRedis = async (username: string): Promise<string | null> => {
+  const redis = getScoreJobRedis()
+  if (!redis) return null
+  return redis.get(`${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`)
+}
+
+const getJobSnapshotFromRedis = async (jobId: string): Promise<ScoreJobSnapshot | null> => {
+  const redis = getScoreJobRedis()
+  if (!redis) return null
+  const raw = await redis.get(`${SCORE_JOB_KEY_PREFIX}${jobId}`)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as ScoreJobSnapshot
+  } catch {
+    return null
+  }
+}
+
 const mapError = (error: unknown): ScoreJobError => {
   if (error instanceof GitHubNotFoundError) {
     return {
@@ -165,10 +233,12 @@ const runScoreJob = async (jobId: string) => {
   job.stage = 'discovering'
   job.progressPercent = 5
   touch(job)
+  await persistJobToRedis(job, true)
 
   try {
     const result = await scoreUserWithMetadata(job.username, {
-      onProgress: (progress) => {
+      onProgress: async (progress) => {
+        const prevStage = job.stage
         job.status = 'running'
         job.stage = progress.stage
         job.progressPercent = progress.progress_percent
@@ -177,6 +247,7 @@ const runScoreJob = async (jobId: string) => {
         job.limits = progress.limits
         job.error = null
         touch(job)
+        await persistJobToRedis(job, prevStage !== progress.stage)
       },
     })
 
@@ -188,6 +259,7 @@ const runScoreJob = async (jobId: string) => {
     job.limits = result.limits
     job.error = null
     touch(job)
+    await persistJobToRedis(job, true)
 
     const now = new Date()
     setCachedScore(job.username, result.result, now, DEFAULT_CACHE_TTL_MS)
@@ -215,15 +287,17 @@ const runScoreJob = async (jobId: string) => {
     job.error = mapError(error)
     job.progressPercent = 100
     touch(job)
+    await persistJobToRedis(job, true)
   } finally {
     const key = job.username.toLowerCase()
     if (activeByUsername.get(key) === jobId) {
       activeByUsername.delete(key)
     }
+    await clearActiveJobInRedis(job.username, jobId)
   }
 }
 
-export const createOrAttachScoreJob = (usernameRaw: string) => {
+export const createOrAttachScoreJob = async (usernameRaw: string) => {
   const { jobs, activeByUsername } = getRuntimeState()
   cleanupJobs()
 
@@ -245,6 +319,17 @@ export const createOrAttachScoreJob = (usernameRaw: string) => {
       return {
         ok: true as const,
         snapshot: toSnapshot(existingJob),
+      }
+    }
+  }
+
+  const remoteJobId = await getActiveJobIdFromRedis(username)
+  if (remoteJobId && remoteJobId !== existingJobId) {
+    const remoteSnapshot = await getJobSnapshotFromRedis(remoteJobId)
+    if (remoteSnapshot && remoteSnapshot.status !== 'failed') {
+      return {
+        ok: true as const,
+        snapshot: remoteSnapshot,
       }
     }
   }
@@ -274,9 +359,11 @@ export const createOrAttachScoreJob = (usernameRaw: string) => {
       error: null,
       createdAt,
       updatedAt: createdAt,
+      lastPersistedAt: 0,
     }
 
     jobs.set(jobId, job)
+    await persistJobToRedis(job, true)
 
     return {
       ok: true as const,
@@ -298,10 +385,13 @@ export const createOrAttachScoreJob = (usernameRaw: string) => {
     error: null,
     createdAt,
     updatedAt: createdAt,
+    lastPersistedAt: 0,
   }
 
   jobs.set(jobId, job)
   activeByUsername.set(username.toLowerCase(), jobId)
+  await setActiveJobInRedis(username, jobId)
+  await persistJobToRedis(job, true)
 
   void runScoreJob(jobId)
 
@@ -311,17 +401,17 @@ export const createOrAttachScoreJob = (usernameRaw: string) => {
   }
 }
 
-export const getScoreJob = (jobId: string) => {
+export const getScoreJob = async (jobId: string) => {
   const { jobs } = getRuntimeState()
   cleanupJobs()
   const job = jobs.get(jobId)
-  if (!job) {
-    return null
+  if (job) {
+    return toSnapshot(job)
   }
-  return toSnapshot(job)
+  return getJobSnapshotFromRedis(jobId)
 }
 
-export const clearScoreJobs = () => {
+export const clearScoreJobs = async () => {
   const { jobs, activeByUsername } = getRuntimeState()
   jobs.clear()
   activeByUsername.clear()

@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { SiteFooter } from '@/app/components/site-footer'
+import { Button } from '@/components/ui/button'
 import { getLeaderboard } from '../../server/leaderboard'
 
 const formatDate = (value: string | null) => {
@@ -61,7 +61,8 @@ export default async function LeaderboardPage() {
             {leaderboard.entries.map((entry, index) => (
               <div
                 key={entry.username}
-                className="flex flex-col gap-4 rounded-lg border border-border bg-background p-4 text-sm md:flex-row md:items-center md:justify-between"
+                style={{ animationDelay: `${index * 40}ms` }}
+                className="group flex flex-col gap-4 rounded-lg border border-border bg-background p-4 text-sm md:flex-row md:items-center md:justify-between animate-rise transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
               >
                 <div className="flex items-center gap-4">
                   <span className="text-lg font-bold text-foreground w-8">
@@ -72,7 +73,7 @@ export default async function LeaderboardPage() {
                     alt=""
                     width={36}
                     height={36}
-                    className="h-9 w-9 rounded-full bg-muted"
+                    className="h-9 w-9 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105"
                     unoptimized
                   />
                   <div className="flex flex-col gap-0.5">

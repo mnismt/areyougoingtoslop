@@ -8,14 +8,26 @@ export function SiteFooter() {
         satirical heuristic &middot; built for screenshots, not courtrooms.
       </span>
       <div className="flex flex-wrap items-center gap-4">
-        <Link href="/fine-print" className="hover:text-foreground">
+        <Link
+          href="/fine-print"
+          className="group relative hover:text-foreground"
+        >
           fine print
+          <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
-        <Link href="/leaderboard" className="hover:text-foreground">
+        <Link
+          href="/leaderboard"
+          className="group relative hover:text-foreground"
+        >
           leaderboard
+          <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
-        <Link href="/ops/queue" className="hover:text-foreground">
+        <Link
+          href="/ops/queue"
+          className="group relative hover:text-foreground"
+        >
           queue ops
+          <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
         <ThemeToggle />
       </div>

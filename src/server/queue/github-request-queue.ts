@@ -93,6 +93,7 @@ type QueueWorkerState = {
   started: boolean
   startPromise: Promise<void> | null
   metrics: QueueWorkerMetrics
+  leaderCheckAt: number
 }
 
 type QueueWorkerMetrics = {
@@ -150,7 +151,7 @@ const STREAM_KEY = 'ays:gh:req:stream'
 const GROUP_NAME = 'ays:gh:req:workers'
 const CONSUMER_PREFIX = 'ays-gh'
 const DELAYED_ZSET_KEY = 'ays:gh:req:delayed'
-const RESULT_KEY_PREFIX = 'ays:gh:req:result:'
+const RESULT_KEY_PREFIX = 'ays:gh:req:reply:'
 const RESULT_TTL_MS = parseBoundedIntegerEnv(
   'GITHUB_QUEUE_RESULT_TTL_MS',
   60 * 1000,
@@ -211,11 +212,31 @@ const RECLAIM_INTERVAL_MS = parseBoundedIntegerEnv(
   250,
   60 * 1000,
 )
+const MAX_STREAM_LEN = parseBoundedIntegerEnv(
+  'GITHUB_QUEUE_MAX_STREAM_LEN',
+  10_000,
+  1_000,
+  100_000,
+)
+const MAX_INFLIGHT = parseBoundedIntegerEnv(
+  'GITHUB_QUEUE_MAX_INFLIGHT',
+  100,
+  10,
+  1000,
+)
+const INFLIGHT_KEY = 'ays:gh:req:inflight'
+const TOKEN_KEY_PREFIX = 'ays:gh:req:token:'
+const LEADER_LOCK_KEY = 'ays:gh:req:leader'
+const LEADER_LOCK_TTL_MS = 10_000
+const LEADER_RENEW_MS = 4_000
+const LEADER_CHECK_INTERVAL_MS = 15_000
+const INSTANCE_ID = randomUUID()
 
 export const GITHUB_QUEUE_STREAM_KEY = STREAM_KEY
 export const GITHUB_QUEUE_GROUP_NAME = GROUP_NAME
 export const GITHUB_QUEUE_DELAYED_ZSET_KEY = DELAYED_ZSET_KEY
 export const GITHUB_QUEUE_WORKER_CONCURRENCY = WORKER_CONCURRENCY
+export const GITHUB_QUEUE_LEADER_LOCK_KEY = LEADER_LOCK_KEY
 
 const getWorkerState = (): QueueWorkerState => {
   const globalState = globalThis as typeof globalThis & {
@@ -227,6 +248,7 @@ const getWorkerState = (): QueueWorkerState => {
       started: false,
       startPromise: null,
       metrics: { ...DEFAULT_QUEUE_WORKER_METRICS },
+      leaderCheckAt: 0,
     }
   } else {
     const current = globalState.__aysGhQueueState
@@ -235,6 +257,7 @@ const getWorkerState = (): QueueWorkerState => {
       started: current.started ?? false,
       startPromise: current.startPromise ?? null,
       metrics: normalizeQueueWorkerMetrics(current.metrics),
+      leaderCheckAt: current.leaderCheckAt ?? 0,
     }
   }
 
@@ -487,20 +510,20 @@ const storeQueueResponse = async (
   requestId: string,
   response: QueueResponseEnvelope,
 ) => {
-  await redis.set(
-    resultKey(requestId),
-    JSON.stringify(response),
-    'PX',
-    RESULT_TTL_MS,
-  )
+  const key = resultKey(requestId)
+  const pipeline = redis.pipeline()
+  pipeline.rpush(key, JSON.stringify(response))
+  pipeline.pexpire(key, RESULT_TTL_MS)
+  await pipeline.exec()
   const state = getWorkerState()
   state.metrics.responses_stored += 1
 }
 
 const executeQueueRequest = async (
   request: GitHubQueueRequest,
+  token?: string,
 ): Promise<unknown> => {
-  const client = createRawGitHubClient({ token: request.token })
+  const client = createRawGitHubClient({ token })
 
   switch (request.kind) {
     case 'get_user': {
@@ -567,8 +590,16 @@ const processQueueMessage = async (
   const state = getWorkerState()
   state.metrics.worker_processed += 1
 
+  let token: string | undefined = request.token
+  const storedToken = await commandRedis.get(
+    `${TOKEN_KEY_PREFIX}${request.request_id}`,
+  )
+  if (storedToken) {
+    token = storedToken
+  }
+
   try {
-    const data = await executeQueueRequest(request)
+    const data = await executeQueueRequest(request, token)
     await storeQueueResponse(commandRedis, request.request_id, {
       ok: true,
       data,
@@ -636,13 +667,33 @@ const runWorkerLoop = async (
   }
 }
 
+const SCHEDULER_IDLE_SLEEP_MS = 5_000
+
 const runDelayedSchedulerLoop = async (commandRedis: Redis) => {
   for (;;) {
     try {
+      const peeked = (await commandRedis.zrange(
+        DELAYED_ZSET_KEY, 0, 0, 'WITHSCORES',
+      )) as string[]
+
+      if (peeked.length === 0) {
+        await delay(SCHEDULER_IDLE_SLEEP_MS)
+        continue
+      }
+
+      const nextDueAt = Number(peeked[1])
+      const now = Date.now()
+
+      if (nextDueAt > now) {
+        const sleepMs = Math.min(nextDueAt - now, SCHEDULER_IDLE_SLEEP_MS)
+        await delay(sleepMs)
+        continue
+      }
+
       const duePayloads = (await commandRedis.zrangebyscore(
         DELAYED_ZSET_KEY,
         '-inf',
-        Date.now().toString(),
+        now.toString(),
         'LIMIT',
         0,
         SCHEDULER_BATCH_SIZE,
@@ -659,7 +710,7 @@ const runDelayedSchedulerLoop = async (commandRedis: Redis) => {
           continue
         }
 
-        await commandRedis.xadd(STREAM_KEY, '*', 'job', payload)
+        await commandRedis.xadd(STREAM_KEY, 'MAXLEN', '~', MAX_STREAM_LEN.toString(), '*', 'job', payload)
       }
     } catch (error) {
       console.warn('github_queue_scheduler_error', {
@@ -670,6 +721,8 @@ const runDelayedSchedulerLoop = async (commandRedis: Redis) => {
   }
 }
 
+const RECLAIM_IDLE_SLEEP_MS = 30_000
+
 const runPendingReclaimLoop = async (
   commandRedis: Redis,
   reclaimRedis: Redis,
@@ -677,6 +730,13 @@ const runPendingReclaimLoop = async (
 ) => {
   for (;;) {
     try {
+      const pendingSummary = await commandRedis.xpending(STREAM_KEY, GROUP_NAME) as unknown[]
+      const pendingCount = typeof pendingSummary?.[0] === 'number' ? pendingSummary[0] : 0
+      if (pendingCount === 0) {
+        await delay(RECLAIM_IDLE_SLEEP_MS)
+        continue
+      }
+
       const rawClaimed = await reclaimRedis.call(
         'XAUTOCLAIM',
         STREAM_KEY,
@@ -707,6 +767,19 @@ const runPendingReclaimLoop = async (
   }
 }
 
+const runForever = async (name: string, fn: () => Promise<void>) => {
+  for (;;) {
+    try {
+      await fn()
+    } catch (error) {
+      console.error(`${name}_crashed`, {
+        message: error instanceof Error ? error.message : String(error),
+      })
+      await delay(2_000)
+    }
+  }
+}
+
 const ensureConsumerGroup = async (redis: Redis) => {
   try {
     await redis.xgroup('CREATE', STREAM_KEY, GROUP_NAME, '0', 'MKSTREAM')
@@ -714,6 +787,28 @@ const ensureConsumerGroup = async (redis: Redis) => {
     const message = error instanceof Error ? error.message : String(error)
     if (!message.includes('BUSYGROUP')) {
       throw error
+    }
+  }
+}
+
+const runLeaderRenewalLoop = async (commandRedis: Redis) => {
+  for (;;) {
+    await delay(LEADER_RENEW_MS)
+    try {
+      const renewed = await commandRedis.set(
+        LEADER_LOCK_KEY,
+        INSTANCE_ID,
+        'PX',
+        LEADER_LOCK_TTL_MS,
+        'XX',
+      )
+      if (renewed !== 'OK') {
+        console.warn('github_queue_leader_lost', { instance: INSTANCE_ID })
+      }
+    } catch (error) {
+      console.warn('github_queue_leader_renew_error', {
+        message: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 }
@@ -729,12 +824,37 @@ const ensureQueueWorkersStarted = async () => {
     return
   }
 
+  // Cooldown: don't spam leader lock attempts on every request
+  const now = Date.now()
+  if (state.leaderCheckAt > 0 && now - state.leaderCheckAt < LEADER_CHECK_INTERVAL_MS) {
+    return
+  }
+  state.leaderCheckAt = now
+
   const commandRedis = getCommandClient()
   if (!commandRedis) {
     return
   }
 
   state.startPromise = (async () => {
+    // Try to acquire leader lock (NX = only if not exists)
+    const acquired = await commandRedis.set(
+      LEADER_LOCK_KEY,
+      INSTANCE_ID,
+      'PX',
+      LEADER_LOCK_TTL_MS,
+      'NX',
+    )
+
+    if (acquired !== 'OK') {
+      console.info('github_queue_leader_skipped', {
+        reason: 'Another instance holds the worker lock.',
+      })
+      return
+    }
+
+    console.info('github_queue_leader_acquired', { instance: INSTANCE_ID })
+
     await ensureConsumerGroup(commandRedis)
 
     const workerConsumers: string[] = []
@@ -749,19 +869,30 @@ const ensureQueueWorkersStarted = async () => {
         maxRetriesPerRequest: null,
       })
 
-      void runWorkerLoop(commandRedis, workerRedis, consumerName)
+      void runForever(`github_queue_worker_${consumerName}`, () =>
+        runWorkerLoop(commandRedis, workerRedis, consumerName),
+      )
     }
 
     const schedulerRedis = commandRedis.duplicate({
       maxRetriesPerRequest: null,
     })
-    void runDelayedSchedulerLoop(schedulerRedis)
+    void runForever('github_queue_scheduler', () =>
+      runDelayedSchedulerLoop(schedulerRedis),
+    )
 
     const reclaimRedis = commandRedis.duplicate({
       maxRetriesPerRequest: null,
     })
     const reclaimConsumer = `${CONSUMER_PREFIX}-reclaim-${randomUUID().slice(0, 6)}`
-    void runPendingReclaimLoop(commandRedis, reclaimRedis, reclaimConsumer)
+    void runForever('github_queue_reclaim', () =>
+      runPendingReclaimLoop(commandRedis, reclaimRedis, reclaimConsumer),
+    )
+
+    // Start leader lock renewal
+    void runForever('github_queue_leader_renew', () =>
+      runLeaderRenewalLoop(commandRedis),
+    )
 
     state.started = true
     state.metrics.worker_starts += 1
@@ -780,23 +911,17 @@ const waitForQueueResponse = async (requestId: string, timeoutMs: number) => {
     throw new GitHubError('GitHub queue unavailable: REDIS_URL is missing.')
   }
 
-  const deadline = Date.now() + timeoutMs
   const key = resultKey(requestId)
+  const blockingRedis = commandRedis.duplicate({
+    maxRetriesPerRequest: null,
+  })
 
-  for (;;) {
-    const raw = await commandRedis.get(key)
-    if (raw) {
-      await commandRedis.del(key)
-      const parsed = JSON.parse(raw) as QueueResponseEnvelope
-      const state = getWorkerState()
-      state.metrics.responses_consumed += 1
-      if (parsed.ok) {
-        return parsed.data
-      }
-      throw restoreQueueError(parsed.error)
-    }
+  try {
+    await blockingRedis.connect()
+    const timeoutSeconds = Math.ceil(timeoutMs / 1000)
+    const result = await blockingRedis.blpop(key, timeoutSeconds)
 
-    if (Date.now() >= deadline) {
+    if (!result) {
       const state = getWorkerState()
       state.metrics.timeouts += 1
       throw new GitHubError(
@@ -805,7 +930,15 @@ const waitForQueueResponse = async (requestId: string, timeoutMs: number) => {
       )
     }
 
-    await delay(50)
+    const parsed = JSON.parse(result[1]) as QueueResponseEnvelope
+    const state = getWorkerState()
+    state.metrics.responses_consumed += 1
+    if (parsed.ok) {
+      return parsed.data
+    }
+    throw restoreQueueError(parsed.error)
+  } finally {
+    await blockingRedis.quit()
   }
 }
 
@@ -821,24 +954,42 @@ const enqueueAndWait = async <K extends GitHubQueueRequestKind>(
 
   await ensureQueueWorkersStarted()
 
-  const request: GitHubQueueRequest<K> = {
-    request_id: randomUUID(),
-    kind,
-    payload,
-    token: options.token,
-    attempt: 0,
-    enqueued_at: new Date().toISOString(),
+  const currentInflight = await commandRedis.incr(INFLIGHT_KEY)
+  if (currentInflight > MAX_INFLIGHT) {
+    await commandRedis.decr(INFLIGHT_KEY)
+    throw new GitHubError('GitHub queue overloaded. Try again later.', 503)
   }
 
-  await commandRedis.xadd(STREAM_KEY, '*', 'job', JSON.stringify(request))
-  const state = getWorkerState()
-  state.metrics.enqueued += 1
+  try {
+    const request: GitHubQueueRequest<K> = {
+      request_id: randomUUID(),
+      kind,
+      payload,
+      attempt: 0,
+      enqueued_at: new Date().toISOString(),
+    }
 
-  const data = await waitForQueueResponse(
-    request.request_id,
-    REQUEST_TIMEOUT_MS,
-  )
-  return data as GitHubQueueRequestResults[K]
+    if (options.token) {
+      await commandRedis.set(
+        `${TOKEN_KEY_PREFIX}${request.request_id}`,
+        options.token,
+        'PX',
+        REQUEST_TIMEOUT_MS + 5000,
+      )
+    }
+
+    await commandRedis.xadd(STREAM_KEY, 'MAXLEN', '~', MAX_STREAM_LEN.toString(), '*', 'job', JSON.stringify(request))
+    const state = getWorkerState()
+    state.metrics.enqueued += 1
+
+    const data = await waitForQueueResponse(
+      request.request_id,
+      REQUEST_TIMEOUT_MS,
+    )
+    return data as GitHubQueueRequestResults[K]
+  } finally {
+    await commandRedis.decr(INFLIGHT_KEY).catch(() => {})
+  }
 }
 
 export const isGitHubRequestQueueEnabled = () => {

@@ -25,7 +25,11 @@ export default async function Home() {
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-16 px-6 py-16">
       <section className="flex flex-col items-center gap-6 text-center animate-rise">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Are you going <span className="text-primary">slop</span>?
+          Are you going{' '}
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-rose-400 animate-pulse">
+            slop
+          </span>
+          ?
         </h1>
         <p className="max-w-lg text-lg text-muted-foreground">
           Paste a GitHub username. We'll judge their commits so you don't have
@@ -44,9 +48,10 @@ export default async function Home() {
             </h2>
             <Link
               href="/leaderboard"
-              className="font-mono text-xs text-primary hover:underline"
+              className="group relative font-mono text-xs text-primary"
             >
               full wall of shame &rarr;
+              <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-primary transition-all duration-300 group-hover:w-full" />
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,14 +59,14 @@ export default async function Home() {
               <Link
                 key={entry.username}
                 href={`/u/${entry.username}`}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-primary hover:shadow-sm"
+                className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
               >
                 <Image
                   src={`https://github.com/${entry.username}.png`}
                   alt=""
                   width={40}
                   height={40}
-                  className="h-10 w-10 rounded-full bg-muted"
+                  className="h-10 w-10 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105"
                   unoptimized
                 />
                 <div className="flex flex-1 flex-col gap-0.5">

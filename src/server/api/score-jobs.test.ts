@@ -8,10 +8,10 @@ import {
 } from './score-jobs'
 
 describe('score jobs', () => {
-  it('rejects invalid usernames', () => {
-    clearScoreJobs()
+  it('rejects invalid usernames', async () => {
+    await clearScoreJobs()
 
-    const result = createOrAttachScoreJob('bad--name')
+    const result = await createOrAttachScoreJob('bad--name')
     assert.equal(result.ok, false)
     if (result.ok) {
       throw new Error('Expected invalid username job creation to fail')
@@ -19,13 +19,13 @@ describe('score jobs', () => {
     assert.equal(result.error.code, 'invalid_username')
   })
 
-  it('returns null for unknown job ids', () => {
-    clearScoreJobs()
-    assert.equal(getScoreJob('missing-job-id'), null)
+  it('returns null for unknown job ids', async () => {
+    await clearScoreJobs()
+    assert.equal(await getScoreJob('missing-job-id'), null)
   })
 
-  it('creates immediate completed snapshot from cached score', () => {
-    clearScoreJobs()
+  it('creates immediate completed snapshot from cached score', async () => {
+    await clearScoreJobs()
     clearScoreCache()
 
     const now = new Date()
@@ -53,7 +53,7 @@ describe('score jobs', () => {
       60_000,
     )
 
-    const result = createOrAttachScoreJob('octocat')
+    const result = await createOrAttachScoreJob('octocat')
     assert.equal(result.ok, true)
     if (!result.ok) {
       throw new Error('Expected cached score job creation to succeed')

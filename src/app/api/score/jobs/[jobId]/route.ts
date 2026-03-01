@@ -7,7 +7,7 @@ type Params = {
 
 export const GET = async (_request: Request, { params }: Params) => {
   const { jobId } = await params
-  const snapshot = getScoreJob(jobId)
+  const snapshot = await getScoreJob(jobId)
   if (!snapshot) {
     return NextResponse.json(
       {

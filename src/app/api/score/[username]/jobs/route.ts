@@ -7,7 +7,7 @@ type Params = {
 
 export const POST = async (_request: Request, { params }: Params) => {
   const { username } = await params
-  const result = createOrAttachScoreJob(username)
+  const result = await createOrAttachScoreJob(username)
 
   if (!result.ok) {
     return NextResponse.json(
