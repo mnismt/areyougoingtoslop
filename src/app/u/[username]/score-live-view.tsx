@@ -3,10 +3,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import { SiteFooter } from '@/app/components/site-footer'
 import SlopGauge from '@/app/components/slop-gauge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import CommitList from './commit-list'
 import ShareActions from './share-actions'
 
@@ -79,10 +79,10 @@ type ScoreJobErrorPayload = {
 const POLL_MS = 1200
 
 const stageLabel: Record<ScoreJobSnapshot['stage'], string> = {
-  queued: 'Queued',
-  discovering: 'Discovering commits',
-  enriching: 'Enriching commit stats',
-  finalizing: 'Finalizing score',
+  queued: 'Waiting in line...',
+  discovering: 'Digging through the evidence...',
+  enriching: 'Cross-referencing the receipts...',
+  finalizing: 'Preparing the verdict',
 }
 
 const confidenceStyles: Record<ScoreResponse['confidence'], string> = {
@@ -90,6 +90,12 @@ const confidenceStyles: Record<ScoreResponse['confidence'], string> = {
   medium:
     'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   high: 'bg-accent-soft text-primary',
+}
+
+const confidenceLine: Record<ScoreResponse['confidence'], string> = {
+  low: 'Not much to go on. More of a guess than a verdict.',
+  medium: "Decent evidence. We're fairly confident in this roast.",
+  high: 'Plenty of receipts. This score has teeth.',
 }
 
 const scoreColorClass = (score: number) => {
@@ -109,43 +115,408 @@ const ErrorState = ({
     <p className="font-mono text-xs text-muted-foreground">{title}</p>
     <p className="mt-4 text-sm text-muted-foreground">{description}</p>
     <Button variant="outline" asChild className="mt-6 font-mono text-xs">
-      <Link href="/">Try another</Link>
+      <Link href="/">Snitch on someone else</Link>
     </Button>
   </div>
 )
 
-const LoadingCards = () => {
-  return (
-    <>
-      <section className="rounded-xl border border-border bg-card p-8 animate-rise">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-14 w-14 rounded-full" />
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-8 w-40" />
-            <Skeleton className="h-4 w-56" />
-          </div>
-        </div>
+const detectionSteps = [
+  'Scanning for AI attribution hints',
+  'Hunting for prompt crumbs left behind',
+  'Measuring velocity spikes and timing',
+  'Flagging massive diffs with lazy messages',
+  'Detecting generate-paste-pray churn',
+]
 
-        <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center">
-          <Skeleton className="h-44 w-full max-w-[220px] rounded-xl" />
-          <div className="flex flex-1 flex-col gap-3">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-9 w-36" />
-          </div>
-        </div>
-      </section>
+const InvestigationView = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
+  const { stage, progress_percent: progress } = snapshot
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {['one', 'two', 'three'].map((slot) => (
-          <Skeleton
-            key={`signal-skeleton-${slot}`}
-            className="h-24 rounded-xl"
+  let checkedCount = 0
+  let hasActiveStep = false
+
+  if (stage === 'queued') {
+    checkedCount = 0
+    hasActiveStep = false
+  } else if (stage === 'discovering') {
+    checkedCount = 0
+    hasActiveStep = true
+  } else if (stage === 'enriching') {
+    const normalized = Math.max(0, progress - 20) / 65
+    checkedCount = Math.min(
+      Math.floor(normalized * detectionSteps.length),
+      detectionSteps.length - 1,
+    )
+    hasActiveStep = true
+  } else {
+    checkedCount = detectionSteps.length
+    hasActiveStep = false
+  }
+
+  const MiniProgress = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
+    const { stage, progress_percent: progress } = snapshot
+
+    return (
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 rounded-xl border border-border bg-card/95 backdrop-blur-sm p-3 shadow-lg animate-rise">
+        <div className="flex items-center justify-between gap-4">
+          <span className="font-mono text-xs text-muted-foreground">
+            {stageLabel[stage]}
+          </span>
+          <span className="font-mono text-xs font-bold text-primary">
+            {progress}%
+          </span>
+        </div>
+        <div className="h-1 w-32 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${Math.max(3, progress)}%` }}
           />
-        ))}
-      </section>
-    </>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card overflow-hidden animate-rise">
+      {/* progress header */}
+      <div className="border-b border-border px-6 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-xs text-muted-foreground">
+            {stageLabel[stage]}
+          </p>
+          <Badge variant="outline" className="font-mono text-[10px]">
+            {progress}%
+          </Badge>
+        </div>
+        <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+          <div
+            className="h-1.5 rounded-full bg-primary transition-all duration-700 ease-out"
+            style={{ width: `${Math.max(3, progress)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* detection protocol */}
+      <div className="px-6 py-5">
+        <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
+          detection protocol
+        </p>
+        <div className="flex flex-col gap-3">
+          {detectionSteps.map((step, i) => {
+            const isDone = i < checkedCount
+            const isActive = hasActiveStep && i === checkedCount
+
+            return (
+              <div
+                key={step}
+                className={`flex items-center gap-3 font-mono text-xs transition-all duration-500 ${
+                  isDone || isActive
+                    ? 'text-foreground'
+                    : 'text-muted-foreground/30'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-500 ${
+                    isDone
+                      ? 'bg-primary'
+                      : isActive
+                        ? 'bg-primary animate-pulse'
+                        : 'bg-muted-foreground/20'
+                  }`}
+                />
+                <span>{step}</span>
+                {isDone ? (
+                  <span className="ml-auto text-[10px] text-muted-foreground">
+                    clear
+                  </span>
+                ) : null}
+                {isActive ? (
+                  <span className="ml-auto text-[10px] text-primary animate-pulse">
+                    scanning
+                  </span>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* live stats */}
+      <div className="border-t border-border px-6 py-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+          <p className="font-mono text-[10px] text-muted-foreground">
+            <span className="text-xs font-bold text-foreground">
+              {snapshot.coverage.commits_enriched}
+            </span>
+            /{snapshot.coverage.commits_discovered} commits
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            <span className="text-xs font-bold text-foreground">
+              {snapshot.coverage.repos_scanned}
+            </span>
+            /{snapshot.coverage.repos_total} repos
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            <span className="text-xs font-bold text-foreground">
+              {snapshot.coverage.window_days}d
+            </span>{' '}
+            window
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            {snapshot.coverage.sources_used.length > 0 ? (
+              <>
+                <span className="text-xs font-bold text-foreground">
+                  {snapshot.coverage.sources_used.length}
+                </span>{' '}
+                intel{' '}
+                {snapshot.coverage.sources_used.length === 1
+                  ? 'source'
+                  : 'sources'}
+              </>
+            ) : (
+              'sources warming up'
+            )}
+          </p>
+        </div>
+
+        {snapshot.coverage.is_partial ? (
+          <p className="mt-3 font-mono text-[10px] text-muted-foreground">
+            Partial snapshot. The investigation continues.
+          </p>
+        ) : null}
+        {snapshot.limits.rate_limited ? (
+          <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+            GitHub told us to slow down. We complied, reluctantly.
+          </p>
+        ) : null}
+        {snapshot.limits.events_pagination_limited ? (
+          <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+            GitHub tried to hide some history. We found it anyway.
+          </p>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
+const MiniProgress = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
+  const { stage, progress_percent: progress } = snapshot
+  const [isExpanded, setIsExpanded] = useState(true)
+  const isComplete = progress >= 100
+
+  // Colors based on completion status
+  const progressColor = isComplete ? 'bg-green-500' : 'bg-primary'
+  const textColor = isComplete ? 'text-green-500' : 'text-primary'
+
+  // Calculate which steps are done/active (same logic as InvestigationView)
+  let checkedCount = 0
+  let hasActiveStep = false
+
+  if (stage === 'queued') {
+    checkedCount = 0
+    hasActiveStep = false
+  } else if (stage === 'discovering') {
+    checkedCount = 0
+    hasActiveStep = true
+  } else if (stage === 'enriching') {
+    const normalized = Math.max(0, progress - 20) / 65
+    checkedCount = Math.min(
+      Math.floor(normalized * detectionSteps.length),
+      detectionSteps.length - 1,
+    )
+    hasActiveStep = true
+  } else {
+    checkedCount = detectionSteps.length
+    hasActiveStep = false
+  }
+
+  // Collapsed view - compact pill
+  if (!isExpanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsExpanded(true)}
+        className="fixed top-24 right-4 z-[9999] flex items-center gap-3 rounded-full border border-border bg-card/95 backdrop-blur-md px-4 py-2 shadow-lg hover:bg-card transition-colors animate-rise"
+        aria-label="Expand progress details"
+      >
+        <div className="flex flex-col items-start">
+          <span className="font-mono text-[10px] text-muted-foreground/60">
+            {isComplete ? 'Investigation Complete' : 'Investigating...'}
+          </span>
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full ${progressColor} transition-all duration-500`}
+                style={{ width: `${Math.max(3, progress)}%` }}
+              />
+            </div>
+            <span className={`font-mono text-xs font-bold ${textColor}`}>
+              {progress}%
+            </span>
+          </div>
+        </div>
+        <svg
+          className="w-4 h-4 text-muted-foreground"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+    )
+  }
+
+  // Expanded view - full card
+  return (
+    <div className="fixed top-24 right-4 z-[9999] w-80 rounded-2xl border border-border bg-card/95 backdrop-blur-md p-5 shadow-2xl animate-rise">
+      {/* Header with collapse button */}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex flex-col">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
+            {isComplete ? 'Investigation Complete' : 'Investigation Progress'}
+          </span>
+          <span className="font-mono text-sm text-foreground mt-1">
+            {stageLabel[stage]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-2xl font-bold tabular-nums ${textColor}`}>
+            {progress}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(false)}
+            className="p-1 hover:bg-muted rounded-lg transition-colors"
+            aria-label="Collapse"
+          >
+            <svg
+              className="w-4 h-4 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden mb-5">
+        <div
+          className={`h-full rounded-full ${progressColor} transition-all duration-700 ease-out`}
+          style={{ width: `${Math.max(3, progress)}%` }}
+        />
+      </div>
+
+      {/* Steps list */}
+      <div className="space-y-2.5">
+        {detectionSteps.map((step, i) => {
+          const isDone = i < checkedCount
+          const isActive = hasActiveStep && i === checkedCount
+
+          return (
+            <div
+              key={step}
+              className={`flex items-center gap-3 transition-all duration-300 ${
+                isDone || isActive ? 'opacity-100' : 'opacity-40'
+              }`}
+            >
+              {/* Status indicator */}
+              <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                {isDone ? (
+                  <svg
+                    className={`w-4 h-4 ${isComplete ? 'text-green-500' : 'text-primary'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                ) : isActive ? (
+                  <div
+                    className={`w-2 h-2 rounded-full ${isComplete ? 'bg-green-500' : 'bg-primary'} animate-pulse`}
+                  />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                )}
+              </div>
+
+              {/* Step text */}
+              <span
+                className={`font-mono text-xs flex-1 ${
+                  isActive
+                    ? 'text-foreground font-medium'
+                    : isDone
+                      ? 'text-muted-foreground'
+                      : 'text-muted-foreground/50'
+                }`}
+              >
+                {step}
+              </span>
+
+              {/* Status label */}
+              {isDone && (
+                <span className="font-mono text-[10px] text-muted-foreground/60">
+                  done
+                </span>
+              )}
+              {isActive && (
+                <span
+                  className={`font-mono text-[10px] animate-pulse ${isComplete ? 'text-green-500' : 'text-primary'}`}
+                >
+                  scanning...
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Live stats */}
+      <div className="mt-5 pt-4 border-t border-border grid grid-cols-2 gap-3">
+        <div className="flex flex-col">
+          <span className="font-mono text-[10px] text-muted-foreground/60">
+            Commits
+          </span>
+          <span className="font-mono text-sm font-semibold text-foreground">
+            {snapshot.coverage.commits_enriched}
+            <span className="text-muted-foreground/60 font-normal">
+              /{snapshot.coverage.commits_discovered}
+            </span>
+          </span>
+        </div>
+        <div className="flex flex-col">
+          <span className="font-mono text-[10px] text-muted-foreground/60">
+            Repositories
+          </span>
+          <span className="font-mono text-sm font-semibold text-foreground">
+            {snapshot.coverage.repos_scanned}
+            <span className="text-muted-foreground/60 font-normal">
+              /{snapshot.coverage.repos_total}
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -156,38 +527,38 @@ const mapErrorToState = (snapshot: ScoreJobSnapshot | null) => {
 
   if (snapshot.error.code === 'not_found') {
     return {
-      title: 'User not found',
+      title: 'Ghost account',
       description:
-        "We couldn't find that GitHub account. Double-check the spelling and try again.",
+        "That username doesn't exist. Either they deleted everything and ran, or you can't spell.",
     }
   }
 
   if (snapshot.error.code === 'job_not_found') {
     return {
       title: 'Score expired',
-      description:
-        'That score job is no longer available. Start a fresh scan and try again.',
+      description: 'That score job vanished. Start a fresh scan.',
     }
   }
 
   if (snapshot.error.code === 'rate_limited') {
     return {
-      title: 'Rate limited',
+      title: 'GitHub says chill',
       description:
-        'GitHub asked us to slow down. Give it a minute and re-run the score.',
+        'We hit the API rate limit. Even surveillance has bureaucracy. Try again in a minute.',
     }
   }
 
   if (snapshot.error.code === 'invalid_username') {
     return {
-      title: 'Invalid username',
-      description: 'That does not look like a valid GitHub username.',
+      title: "That's not a username",
+      description: "GitHub usernames don't look like that. We checked.",
     }
   }
 
   return {
-    title: 'Score unavailable',
-    description: 'We could not compute a score right now. Try again later.',
+    title: 'The vibes are unclear',
+    description:
+      'Something went wrong on our end. The slop detector needs a minute.',
   }
 }
 
@@ -225,66 +596,6 @@ const isScoreJobErrorPayload = (
   payload: ScoreJobSnapshot | ScoreJobErrorPayload,
 ): payload is ScoreJobErrorPayload => {
   return typeof (payload as ScoreJobErrorPayload).error === 'string'
-}
-
-const JobProgress = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
-  return (
-    <section className="rounded-xl border border-border bg-card p-5 animate-rise">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-mono text-xs text-muted-foreground">
-          {stageLabel[snapshot.stage]}
-        </p>
-        <Badge variant="outline" className="font-mono text-[10px]">
-          {snapshot.progress_percent}%
-        </Badge>
-      </div>
-
-      <div className="mt-3 h-2 w-full rounded-full bg-muted">
-        <div
-          className="h-2 rounded-full bg-primary transition-all"
-          style={{ width: `${Math.max(4, snapshot.progress_percent)}%` }}
-        />
-      </div>
-
-      <div className="mt-4 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-        <p className="font-mono">
-          commits enriched {snapshot.coverage.commits_enriched}/
-          {snapshot.coverage.commits_discovered}
-        </p>
-        <p className="font-mono">
-          repos scanned {snapshot.coverage.repos_scanned}/
-          {snapshot.coverage.repos_total}
-        </p>
-        <p className="font-mono">window {snapshot.coverage.window_days} days</p>
-        <p className="font-mono">
-          sources{' '}
-          {snapshot.coverage.sources_used.length > 0
-            ? snapshot.coverage.sources_used.join(', ')
-            : 'warming up'}
-        </p>
-      </div>
-
-      {snapshot.coverage.is_partial ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          Partial snapshot. We keep improving this score while data comes in.
-        </p>
-      ) : null}
-
-      {snapshot.limits.events_pagination_limited ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Events pagination was limited for this user. We used repository commit
-          enumeration to recover more history.
-        </p>
-      ) : null}
-
-      {snapshot.limits.rate_limited ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Hit GitHub rate limits while scanning. Final coverage may be lower
-          than ideal.
-        </p>
-      ) : null}
-    </section>
-  )
 }
 
 export default function ScoreLiveView({ username }: { username: string }) {
@@ -420,12 +731,30 @@ export default function ScoreLiveView({ username }: { username: string }) {
 
   return (
     <>
-      {snapshot ? <JobProgress snapshot={snapshot} /> : null}
-
       {!data ? (
-        <LoadingCards />
+        snapshot ? (
+          <InvestigationView snapshot={snapshot} />
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-8 animate-rise">
+            <p className="font-mono text-xs text-muted-foreground animate-pulse">
+              Starting investigation...
+            </p>
+          </div>
+        )
       ) : (
         <>
+          {(() => {
+            const isStillProcessing =
+              snapshot?.coverage.is_partial ||
+              (snapshot?.coverage.commits_enriched ?? 0) <
+                (snapshot?.coverage.commits_discovered ?? 0) ||
+              snapshot?.status === 'running'
+
+            if (isStillProcessing && snapshot) {
+              return <MiniProgress snapshot={snapshot} />
+            }
+            return null
+          })()}
           <section
             id="share-card"
             className="flex flex-col gap-8 rounded-xl border border-border bg-card p-8 animate-rise"
@@ -472,24 +801,54 @@ export default function ScoreLiveView({ username }: { username: string }) {
                     </Badge>
                   ) : null}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Confidence reflects the volume of recent public activity and
-                  the amount of commit stats we can verify.
-                </p>
                 <p className="text-sm text-muted-foreground">
-                  We rank the surface-level signals in public activity. The
-                  score is a playful heuristic, not a definitive detector.
+                  {confidenceLine[data.confidence]}
                 </p>
                 {hasLowSignal ? (
                   <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-                    Not enough recent activity to lean on. Try again after a few
-                    public commits.
+                    Not enough commits to judge. Suspiciously quiet, or just on
+                    vacation.
                   </div>
                 ) : null}
                 <ShareActions username={username} />
               </div>
             </div>
           </section>
+
+          {snapshot ? (
+            <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-4 animate-rise">
+              {[
+                {
+                  value: snapshot.coverage.commits_enriched,
+                  label: 'commits inspected',
+                },
+                {
+                  value: snapshot.coverage.repos_scanned,
+                  label: 'repos raided',
+                },
+                {
+                  value: `${snapshot.coverage.window_days}d`,
+                  label: 'crime window',
+                },
+                {
+                  value: snapshot.coverage.sources_used.length,
+                  label: 'intel sources',
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex flex-col items-center gap-1 bg-card px-4 py-4"
+                >
+                  <span className="font-mono text-lg font-bold text-foreground">
+                    {stat.value}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {stat.label}
+                  </span>
+                </div>
+              ))}
+            </section>
+          ) : null}
 
           <section className="grid gap-4 md:grid-cols-3">
             {data.top_signals.map((signal) => (
@@ -509,26 +868,11 @@ export default function ScoreLiveView({ username }: { username: string }) {
       )}
 
       <p className="text-center font-mono text-xs text-muted-foreground">
-        Satirical heuristic, not proof. Roast the behavior, not the person.
+        Entertainment purposes only. No commits were harmed in the making of
+        this score.
       </p>
 
-      <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
-        <span>Built for screenshots, not courtrooms.</span>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/how-it-works" className="hover:text-foreground">
-            How it works
-          </Link>
-          <Link href="/feedback" className="hover:text-foreground">
-            Feedback
-          </Link>
-          <Link href="/terms" className="hover:text-foreground">
-            Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground">
-            Privacy
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   )
 }

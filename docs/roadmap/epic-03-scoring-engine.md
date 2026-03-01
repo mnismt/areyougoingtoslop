@@ -13,11 +13,11 @@ Convert normalized activity into score, tier, confidence, and reasons.
 
 ## Tasks
 - [ ] Define signal schema + per-signal weight config
-- [ ] Implement signal: commit-message AI keywords
+- [ ] Implement signal: commit-message AI attribution hints
 - [ ] Implement signal: prompt-crumb patterns
-- [ ] Implement signal: velocity vs volume
+- [ ] Implement signal: velocity vs volume (non-merge commits)
 - [ ] Implement signal: apathy ratio
-- [ ] Implement signal: churn/rewrite behavior
+- [ ] Implement signal: churn/rewrite behavior (non-merge commits)
 - [ ] Implement recency decay bucket weights
   - [ ] 0–30d = 1.0
   - [ ] 31–90d = 0.6

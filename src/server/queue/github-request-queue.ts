@@ -92,7 +92,35 @@ type QueueWorkerState = {
   commandClient: Redis | null
   started: boolean
   startPromise: Promise<void> | null
+  metrics: QueueWorkerMetrics
 }
+
+type QueueWorkerMetrics = {
+  worker_starts: number
+  enqueued: number
+  worker_processed: number
+  responses_stored: number
+  responses_consumed: number
+  retries_scheduled: number
+  timeouts: number
+}
+
+const DEFAULT_QUEUE_WORKER_METRICS: QueueWorkerMetrics = {
+  worker_starts: 0,
+  enqueued: 0,
+  worker_processed: 0,
+  responses_stored: 0,
+  responses_consumed: 0,
+  retries_scheduled: 0,
+  timeouts: 0,
+}
+
+const normalizeQueueWorkerMetrics = (
+  metrics?: Partial<QueueWorkerMetrics>,
+): QueueWorkerMetrics => ({
+  ...DEFAULT_QUEUE_WORKER_METRICS,
+  ...(metrics ?? {}),
+})
 
 const parseIntegerEnv = (name: string, fallback: number) => {
   const raw = process.env[name]
@@ -184,18 +212,49 @@ const RECLAIM_INTERVAL_MS = parseBoundedIntegerEnv(
   60 * 1000,
 )
 
+export const GITHUB_QUEUE_STREAM_KEY = STREAM_KEY
+export const GITHUB_QUEUE_GROUP_NAME = GROUP_NAME
+export const GITHUB_QUEUE_DELAYED_ZSET_KEY = DELAYED_ZSET_KEY
+export const GITHUB_QUEUE_WORKER_CONCURRENCY = WORKER_CONCURRENCY
+
 const getWorkerState = (): QueueWorkerState => {
   const globalState = globalThis as typeof globalThis & {
-    __aysGhQueueState?: QueueWorkerState
+    __aysGhQueueState?: Partial<QueueWorkerState>
   }
   if (!globalState.__aysGhQueueState) {
     globalState.__aysGhQueueState = {
       commandClient: null,
       started: false,
       startPromise: null,
+      metrics: { ...DEFAULT_QUEUE_WORKER_METRICS },
+    }
+  } else {
+    const current = globalState.__aysGhQueueState
+    globalState.__aysGhQueueState = {
+      commandClient: current.commandClient ?? null,
+      started: current.started ?? false,
+      startPromise: current.startPromise ?? null,
+      metrics: normalizeQueueWorkerMetrics(current.metrics),
     }
   }
-  return globalState.__aysGhQueueState
+
+  return globalState.__aysGhQueueState as QueueWorkerState
+}
+
+export const getGitHubQueueRuntimeMetrics = () => {
+  const state = getWorkerState()
+  const metrics = normalizeQueueWorkerMetrics(state.metrics)
+  return {
+    started: state.started,
+    has_command_client: Boolean(state.commandClient),
+    worker_starts: metrics.worker_starts,
+    enqueued: metrics.enqueued,
+    worker_processed: metrics.worker_processed,
+    responses_stored: metrics.responses_stored,
+    responses_consumed: metrics.responses_consumed,
+    retries_scheduled: metrics.retries_scheduled,
+    timeouts: metrics.timeouts,
+  }
 }
 
 const getRedisUrl = () => {
@@ -229,6 +288,8 @@ const getCommandClient = () => {
   state.commandClient = client
   return client
 }
+
+export const getGitHubQueueCommandClient = () => getCommandClient()
 
 const isGitHubQueueRequestKind = (
   value: string,
@@ -432,6 +493,8 @@ const storeQueueResponse = async (
     'PX',
     RESULT_TTL_MS,
   )
+  const state = getWorkerState()
+  state.metrics.responses_stored += 1
 }
 
 const executeQueueRequest = async (
@@ -491,6 +554,8 @@ const scheduleRetry = async (
     retryAt.toString(),
     JSON.stringify(retryRequest),
   )
+  const state = getWorkerState()
+  state.metrics.retries_scheduled += 1
 }
 
 const processQueueMessage = async (
@@ -499,6 +564,9 @@ const processQueueMessage = async (
   messageId: string,
   request: GitHubQueueRequest,
 ) => {
+  const state = getWorkerState()
+  state.metrics.worker_processed += 1
+
   try {
     const data = await executeQueueRequest(request)
     await storeQueueResponse(commandRedis, request.request_id, {
@@ -696,6 +764,7 @@ const ensureQueueWorkersStarted = async () => {
     void runPendingReclaimLoop(commandRedis, reclaimRedis, reclaimConsumer)
 
     state.started = true
+    state.metrics.worker_starts += 1
   })()
 
   try {
@@ -719,6 +788,8 @@ const waitForQueueResponse = async (requestId: string, timeoutMs: number) => {
     if (raw) {
       await commandRedis.del(key)
       const parsed = JSON.parse(raw) as QueueResponseEnvelope
+      const state = getWorkerState()
+      state.metrics.responses_consumed += 1
       if (parsed.ok) {
         return parsed.data
       }
@@ -726,6 +797,8 @@ const waitForQueueResponse = async (requestId: string, timeoutMs: number) => {
     }
 
     if (Date.now() >= deadline) {
+      const state = getWorkerState()
+      state.metrics.timeouts += 1
       throw new GitHubError(
         'GitHub request timed out while waiting for queue.',
         504,
@@ -758,6 +831,8 @@ const enqueueAndWait = async <K extends GitHubQueueRequestKind>(
   }
 
   await commandRedis.xadd(STREAM_KEY, '*', 'job', JSON.stringify(request))
+  const state = getWorkerState()
+  state.metrics.enqueued += 1
 
   const data = await waitForQueueResponse(
     request.request_id,

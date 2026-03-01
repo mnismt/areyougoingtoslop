@@ -107,7 +107,7 @@ Response (example):
     "slop_score": 44,
     "tier": "The LLM Diplomat",
     "confidence": "medium",
-    "top_signals": ["Big change spikes in short windows"],
+    "top_signals": ["Suspicious velocity spikes"],
     "scoring_window": "last 180 days",
     "analyzed_commits": []
   },
@@ -137,18 +137,18 @@ Event types:
 - `CommitArtifactCache`: immutable commit enrichment blobs keyed by `repo:sha`.
 
 ## Frontend UX Requirements
-- Keep route-level loading file for initial shell (`/u/[username]/loading.tsx`).
-- Add staged skeletons:
-  - hero card skeleton
-  - signal card skeletons
-  - analyzed-commit row skeletons
-- Add live analyzer panel showing:
-  - stage label (`Discovering`, `Enriching`, `Scoring`, `Finalizing`)
-  - progress bar with percentage
-  - coverage counters
-  - warnings when source limits are hit
-- Render score and top signals progressively, then stabilize when complete.
-- Preserve satirical disclaimer and confidence explanation in partial and final states.
+- Before first snapshot: brief "Starting investigation..." placeholder.
+- **Investigation view** (`InvestigationView` component) replaces skeleton loading:
+  - **Progress header:** stage label + percentage badge + thin progress bar with smooth transitions.
+  - **Detection protocol:** 5 signal-check steps that light up progressively as stages advance (pending → scanning → clear).
+  - **Live stats footer:** commits enriched/discovered, repos scanned/total, window, intel sources — updating in real-time.
+  - **Warnings:** partial snapshot, rate-limit, and pagination-limit messages shown inline.
+- On completion, investigation view is replaced by:
+  - Score card (avatar, tier, gauge, confidence badge, verdict line, share actions).
+  - Stats strip (4-column grid: commits inspected, repos raided, crime window, intel sources).
+  - Signal breakdown cards (top signals with score-colored left border).
+  - Analyzed commits list (20/page, flagged-only filter).
+- Preserve satirical disclaimer and confidence verdict line in final state.
 
 ## Workstreams and Tasks
 
@@ -178,10 +178,11 @@ Event types:
 
 ### E) UI/UX Streaming
 - [x] Add client-side score job hook (start + fallback poll).
-- [x] Upgrade result page to progressive rendering with skeletons.
+- [x] Upgrade result page to investigation view with detection protocol + live stats (replaced skeleton loading).
 - [x] Add coverage and limitation messaging in UI.
-- [x] Ensure mobile-first layout for streaming panel + commit list.
+- [x] Ensure mobile-first layout for investigation view + commit list.
 - [x] Add client-side commit list pagination (20/page) with flagged-only filter toggle.
+- [x] Personality overhaul: rewrote stage labels, error states, share actions, flag labels, signal copy.
 
 ### F) Caching and Reliability
 - [ ] Keep 12h score cache and add stale-while-revalidate behavior.

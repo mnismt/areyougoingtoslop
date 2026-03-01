@@ -1,11 +1,18 @@
 'use client'
 
-import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { AnalyzedCommit } from './score-live-view'
 
 const PAGE_SIZE = 20
+
+const flagLabels: Record<string, string> = {
+  ai_keyword: 'AI attribution hint',
+  prompt_crumb: 'prompt crumb',
+  large_generic: 'lazy message',
+  high_churn: 'churn storm',
+}
 
 function pageWindow(current: number, total: number): (number | 'ellipsis')[] {
   if (total <= 7) {
@@ -26,11 +33,7 @@ function pageWindow(current: number, total: number): (number | 'ellipsis')[] {
   return pages
 }
 
-export default function CommitList({
-  commits,
-}: {
-  commits: AnalyzedCommit[]
-}) {
+export default function CommitList({ commits }: { commits: AnalyzedCommit[] }) {
   const [page, setPage] = useState(1)
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false)
   const sectionRef = useRef<HTMLElement>(null)
@@ -129,7 +132,7 @@ export default function CommitList({
                     key={flag}
                     className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                   >
-                    {flag}
+                    {flagLabels[flag] ?? flag}
                   </span>
                 ))}
               </div>

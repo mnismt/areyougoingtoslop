@@ -72,10 +72,10 @@ export default function ShareActions({ username }: ShareActionsProps) {
         className="font-mono text-xs"
       >
         {copyState === 'done'
-          ? 'Link copied'
+          ? 'Copied!'
           : copyState === 'error'
             ? 'Copy failed'
-            : 'Copy link'}
+            : 'Copy receipt'}
       </Button>
       <Button
         variant="outline"
@@ -83,10 +83,10 @@ export default function ShareActions({ username }: ShareActionsProps) {
         className="font-mono text-xs"
       >
         {downloadState === 'done'
-          ? 'Card saved'
+          ? 'Saved!'
           : downloadState === 'busy'
             ? 'Saving...'
-            : 'Download card'}
+            : 'Download evidence'}
       </Button>
     </div>
   )

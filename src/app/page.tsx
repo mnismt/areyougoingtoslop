@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { SiteFooter } from '@/app/components/site-footer'
 import { getLeaderboard } from '../server/leaderboard'
 import UsernameForm from './components/username-form'
 
@@ -9,6 +9,14 @@ const scoreColor = (score: number) => {
   if (score <= 70) return 'score-mid'
   return 'score-high'
 }
+
+const signals = [
+  'commits with AI attribution hints',
+  'suspiciously large diffs at 3am',
+  'commit messages shorter than your attention span',
+  'prompt crumbs left behind like digital breadcrumbs',
+  'code churn that screams "generate, paste, pray"',
+]
 
 export default async function Home() {
   const leaderboard = await getLeaderboard({ limit: 6 })
@@ -20,7 +28,8 @@ export default async function Home() {
           Are you going <span className="text-primary">slop</span>?
         </h1>
         <p className="max-w-lg text-lg text-muted-foreground">
-          Enter a GitHub username to measure their slop levels.
+          Paste a GitHub username. We'll judge their commits so you don't have
+          to.
         </p>
         <div className="w-full max-w-md">
           <UsernameForm />
@@ -31,13 +40,13 @@ export default async function Home() {
         <section className="flex flex-col gap-6 animate-rise animate-delay-1">
           <div className="flex items-center justify-between">
             <h2 className="font-mono text-xs text-muted-foreground">
-              Top slop offenders
+              hall of shame
             </h2>
             <Link
               href="/leaderboard"
               className="font-mono text-xs text-primary hover:underline"
             >
-              View all
+              full wall of shame &rarr;
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -72,24 +81,23 @@ export default async function Home() {
         </section>
       )}
 
-      <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
-        <span>Satirical heuristic. Built for screenshots, not courtrooms.</span>
-        <div className="flex flex-wrap items-center gap-4">
-          <Link href="/how-it-works" className="hover:text-foreground">
-            How it works
-          </Link>
-          <Link href="/feedback" className="hover:text-foreground">
-            Feedback
-          </Link>
-          <Link href="/terms" className="hover:text-foreground">
-            Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground">
-            Privacy
-          </Link>
-          <ThemeToggle />
-        </div>
-      </footer>
+      <section className="flex flex-col gap-4 animate-rise animate-delay-1">
+        <h2 className="font-mono text-xs text-muted-foreground">
+          what we sniff for
+        </h2>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {signals.map((signal) => (
+            <li
+              key={signal}
+              className="font-mono text-xs text-muted-foreground"
+            >
+              &bull; {signal}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <SiteFooter />
     </main>
   )
 }

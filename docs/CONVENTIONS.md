@@ -28,9 +28,10 @@ Always use **bun** (`bun install`, `bun add`, `bun run`). Never npm/yarn/pnpm.
 src/
   app/
     api/*            # API route handlers
-    components/      # Shared UI components
-    u/[username]/*   # Result page
-    leaderboard/     # Leaderboard page
+    components/      # Shared UI (site-footer, slop-gauge, username-form)
+    u/[username]/*   # Score result page (investigation view → results)
+    leaderboard/     # Wall of Shame
+    fine-print/      # Consolidated terms, privacy, removal, feedback
   server/
     github/*         # GitHub data ingestion
     scoring/*        # Scoring engine
@@ -38,6 +39,7 @@ src/
     leaderboard/*    # Leaderboard storage
     rate-limit/*     # Rate limiting
     api/*            # Server-side API utilities
+    queue/*          # Redis Stream queue for GitHub requests
 ```
 
 ## Scoring: Recency Decay

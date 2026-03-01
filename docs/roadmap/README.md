@@ -9,16 +9,16 @@ This folder tracks implementation planning at the **epic level**.
 - [!] Blocked
 
 ## Epic Files
-- [ ] [Epic 01 — Foundation & Repo Hygiene](./epic-01-foundation.md)
-- [ ] [Epic 02 — GitHub Data Ingestion Layer](./epic-02-ingestion.md)
-- [ ] [Epic 03 — Slop Scoring Engine v1](./epic-03-scoring-engine.md)
-- [ ] [Epic 04 — API Surface](./epic-04-api-surface.md)
-- [ ] [Epic 05 — Core Product UI](./epic-05-core-ui.md)
-- [ ] [Epic 06 — Virality Layer (Share + OG)](./epic-06-virality.md)
-- [ ] [Epic 07 — Leaderboard (Default Public)](./epic-07-leaderboard.md)
-- [ ] [Epic 08 — Safety, Transparency, and Policy](./epic-08-safety-transparency.md)
-- [ ] [Epic 09 — Performance & Reliability](./epic-09-performance-reliability.md)
-- [ ] [Epic 10 — Launch Readiness](./epic-10-launch-readiness.md)
+- [x] [Epic 01 — Foundation & Repo Hygiene](./epic-01-foundation.md)
+- [x] [Epic 02 — GitHub Data Ingestion Layer](./epic-02-ingestion.md)
+- [x] [Epic 03 — Slop Scoring Engine v1](./epic-03-scoring-engine.md)
+- [x] [Epic 04 — API Surface](./epic-04-api-surface.md)
+- [x] [Epic 05 — Core Product UI](./epic-05-core-ui.md)
+- [x] [Epic 06 — Virality Layer (Share + OG)](./epic-06-virality.md)
+- [x] [Epic 07 — Leaderboard (Default Public)](./epic-07-leaderboard.md)
+- [x] [Epic 08 — Safety, Transparency, and Policy](./epic-08-safety-transparency.md)
+- [x] [Epic 09 — Performance & Reliability](./epic-09-performance-reliability.md)
+- [~] [Epic 10 — Launch Readiness](./epic-10-launch-readiness.md)
 - [~] [Epic 11 — Coverage-First Ingestion + Streaming UX](./epic-11-coverage-streaming.md)
 
 ## Milestones

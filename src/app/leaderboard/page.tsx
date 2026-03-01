@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { SiteFooter } from '@/app/components/site-footer'
 import { getLeaderboard } from '../../server/leaderboard'
 
 const formatDate = (value: string | null) => {
@@ -37,23 +38,23 @@ export default async function LeaderboardPage() {
           &larr; back
         </Link>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          The Slop Leaderboard
+          Wall of Shame
         </h1>
         <p className="text-sm text-muted-foreground">
-          Ranked by slop score with a confidence floor. Updated from recent
-          public scans.
+          The most AI-assisted GitHub profiles we've found so far. Ranked by
+          slop score.
         </p>
       </header>
 
       <section className="rounded-xl border border-border bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
-          <span>Top 50</span>
+          <span>top 50 offenders</span>
           <span>Last updated {formatDate(leaderboard.updated_at)}</span>
         </div>
 
         {leaderboard.entries.length === 0 ? (
           <div className="mt-6 rounded-lg border border-border bg-muted/50 p-6 text-sm text-muted-foreground">
-            No scores yet. Run a scan and the leaderboard will light up.
+            Nobody's been snitched on yet. Be the change you want to see.
           </div>
         ) : (
           <div className="mt-6 grid gap-3">
@@ -101,7 +102,7 @@ export default async function LeaderboardPage() {
                     asChild
                     className="font-mono text-xs"
                   >
-                    <Link href={`/u/${entry.username}`}>View</Link>
+                    <Link href={`/u/${entry.username}`}>Inspect</Link>
                   </Button>
                 </div>
               </div>
@@ -110,23 +111,7 @@ export default async function LeaderboardPage() {
         )}
       </section>
 
-      <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
-        <span>Satirical heuristic. Roast the code, not the coder.</span>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/how-it-works" className="hover:text-foreground">
-            How it works
-          </Link>
-          <Link href="/feedback" className="hover:text-foreground">
-            Feedback
-          </Link>
-          <Link href="/terms" className="hover:text-foreground">
-            Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground">
-            Privacy
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   )
 }

@@ -16,7 +16,7 @@ export default function UsernameForm() {
     event.preventDefault()
     const cleaned = sanitizeUsername(username)
     if (!cleaned) {
-      setError("Drop a GitHub username and we'll do the rest.")
+      setError('We need a username. Snitching requires specificity.')
       return
     }
     setError('')
@@ -29,17 +29,17 @@ export default function UsernameForm() {
       className="flex w-full flex-col gap-2 text-left"
     >
       <label className="font-mono text-xs text-muted-foreground">
-        GitHub username
+        suspect
       </label>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           value={username}
           onChange={(event) => setUsername(event.target.value)}
-          placeholder="octocat"
+          placeholder="e.g. your coworker"
           className="h-12 flex-1 rounded-xl"
         />
         <Button type="submit" className="h-12 rounded-xl px-6">
-          Score me
+          Inspect the vibes
         </Button>
       </div>
       {error ? <p className="text-sm text-primary">{error}</p> : null}

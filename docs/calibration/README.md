@@ -7,6 +7,7 @@ keep the roast fun and grounded.
 ## How to use
 - Compare new model weights against the sample expectations.
 - Focus on directionally correct tiers rather than exact scores.
+- Include known false-positive checks (plain tool mentions, merge-heavy days).
 - Update notes as the product tone evolves.
 
 ## Files

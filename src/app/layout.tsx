@@ -16,21 +16,21 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'areyougoingslop',
   description:
-    "A playful, transparent heuristic for how AI-assisted a GitHub user's public contributions look.",
+    'How much of your GitHub profile is AI slop? Paste a username and find out.',
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   ),
   openGraph: {
     title: 'areyougoingslop',
     description:
-      "A playful, transparent heuristic for how AI-assisted a GitHub user's public contributions look.",
+      'How much of your GitHub profile is AI slop? Paste a username and find out.',
     images: ['/api/og/default'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'areyougoingslop',
     description:
-      "A playful, transparent heuristic for how AI-assisted a GitHub user's public contributions look.",
+      'How much of your GitHub profile is AI slop? Paste a username and find out.',
     images: ['/api/og/default'],
   },
 }

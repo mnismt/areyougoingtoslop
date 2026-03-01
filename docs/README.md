@@ -14,3 +14,4 @@
 
 ## Operations
 - [`queue-verification.md`](./queue-verification.md) — Queue/job lifecycle checks and troubleshooting notes.
+- [`queue-observability.md`](./queue-observability.md) — Queue telemetry model, field semantics, and deep debug playbook.

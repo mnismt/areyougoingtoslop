@@ -12,14 +12,15 @@ Build the end-to-end user experience from username input to results.
 - Leaderboard and virality mechanics
 
 ## Tasks
-- [ ] Build homepage with username input
-- [ ] Add loading states (funny but concise)
-- [ ] Build result page route `/u/[username]`
-- [ ] Render score gauge + tier explanation
-- [ ] Render signal breakdown cards ("why this score")
-- [ ] Render confidence badge + scoring window label
-- [ ] Add empty/error states for low/no data users
+- [x] Build homepage with username input (`suspect` field, `Inspect the vibes` CTA)
+- [x] Add loading states — investigation view with detection protocol + live stats
+- [x] Build result page route `/u/[username]`
+- [x] Render score gauge + tier explanation
+- [x] Render signal breakdown cards (top signals with score-colored left border)
+- [x] Render confidence badge + scoring window label + confidence verdict line
+- [x] Add empty/error states for low/no data users (Ghost account, GitHub says chill, etc.)
 - [x] Add analyzed commits pagination (20/page) + flagged-only filter toggle (`commit-list.tsx`)
+- [x] Personality overhaul — rewrote all copy for voice consistency (stage labels, error states, share actions, flag labels, signal copy)
 
 ## Dependencies
 - Epic 04 score API.

@@ -13,7 +13,7 @@ Make results easy to share and optimized for social spread.
 
 ## Tasks
 - [x] Generate dynamic OG image from result payload
-- [x] Add share CTA (copy link / download card)
+- [x] Add share CTA (`Copy receipt` / `Download evidence`)
 - [x] Ensure score page metadata is social-preview ready
 - [x] Add screenshot-friendly result layout
 

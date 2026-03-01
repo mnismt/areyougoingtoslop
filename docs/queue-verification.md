@@ -59,3 +59,47 @@ Expected keys appear during traffic, including stream/delay/result keys:
 - Repeated `404` polling with a real `job_id` usually means the process restarted or the job aged out.
 - Score-job snapshots are in-process memory with a 30-minute retention window.
 - In development, duplicate `POST /jobs` calls can happen due to React Strict Mode behavior.
+- After hot reloads, if queue telemetry appears stale, restart `bun dev` to reset process-local runtime counters.
+
+## 6) Queue Monitoring Page
+
+```bash
+curl -s "http://localhost:3000/api/queue/github"
+```
+
+Expected:
+- `health`: `ok|degraded|disabled`
+- `queue.lag`, `queue.pending`, `queue.delayed` counters are present
+- `queue.active_consumers` may spike during active work and return to `0` on idle snapshots
+- `client_selection` and `runtime` objects are present for in-process queue diagnostics
+
+UI:
+- Open `http://localhost:3000/ops/queue` for the public live dashboard.
+
+## 7) Burst Test (Recommended)
+
+Start multiple usernames in parallel to force queue traffic:
+
+```bash
+for u in torvalds gaearon yyx990803 sindresorhus octocat defunkt; do
+  curl -s -X POST "http://localhost:3000/api/score/$u/jobs" >/dev/null &
+done
+wait
+```
+
+Then poll queue snapshot a few times:
+
+```bash
+for i in 1 2 3 4 5 6; do
+  curl -s "http://localhost:3000/api/queue/github"
+  sleep 1
+done
+```
+
+Expected under load:
+- `client_selection.queued` increases.
+- `runtime.enqueued` increases.
+- `queue.processed_entries` increases.
+- `queue.pending` / `queue.lag` may briefly rise and then return to `0` after drain.
+
+If this does not happen, see `docs/queue-observability.md` for mismatch diagnosis.

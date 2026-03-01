@@ -3,12 +3,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createQueuedGitHubClient = exports.isGitHubRequestQueueEnabled = void 0;
+exports.createQueuedGitHubClient = exports.isGitHubRequestQueueEnabled = exports.getGitHubQueueCommandClient = exports.getGitHubQueueRuntimeMetrics = exports.GITHUB_QUEUE_WORKER_CONCURRENCY = exports.GITHUB_QUEUE_DELAYED_ZSET_KEY = exports.GITHUB_QUEUE_GROUP_NAME = exports.GITHUB_QUEUE_STREAM_KEY = void 0;
 const node_crypto_1 = require("node:crypto");
 const promises_1 = require("node:timers/promises");
 const ioredis_1 = __importDefault(require("ioredis"));
 const errors_1 = require("../github/errors");
 const raw_client_1 = require("../github/raw-client");
+const DEFAULT_QUEUE_WORKER_METRICS = {
+    worker_starts: 0,
+    enqueued: 0,
+    worker_processed: 0,
+    responses_stored: 0,
+    responses_consumed: 0,
+    retries_scheduled: 0,
+    timeouts: 0,
+};
+const normalizeQueueWorkerMetrics = (metrics) => ({
+    ...DEFAULT_QUEUE_WORKER_METRICS,
+    ...(metrics ?? {}),
+});
 const parseIntegerEnv = (name, fallback) => {
     const raw = process.env[name];
     if (!raw) {
@@ -39,6 +52,10 @@ const SCHEDULER_BATCH_SIZE = parseBoundedIntegerEnv('GITHUB_QUEUE_SCHEDULER_BATC
 const SCHEDULER_INTERVAL_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_SCHEDULER_INTERVAL_MS', 200, 50, 2 * 1000);
 const STALE_RECLAIM_IDLE_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_RECLAIM_IDLE_MS', 20 * 1000, 2 * 1000, 30 * 60 * 1000);
 const RECLAIM_INTERVAL_MS = parseBoundedIntegerEnv('GITHUB_QUEUE_RECLAIM_INTERVAL_MS', 5 * 1000, 250, 60 * 1000);
+exports.GITHUB_QUEUE_STREAM_KEY = STREAM_KEY;
+exports.GITHUB_QUEUE_GROUP_NAME = GROUP_NAME;
+exports.GITHUB_QUEUE_DELAYED_ZSET_KEY = DELAYED_ZSET_KEY;
+exports.GITHUB_QUEUE_WORKER_CONCURRENCY = WORKER_CONCURRENCY;
 const getWorkerState = () => {
     const globalState = globalThis;
     if (!globalState.__aysGhQueueState) {
@@ -46,10 +63,36 @@ const getWorkerState = () => {
             commandClient: null,
             started: false,
             startPromise: null,
+            metrics: { ...DEFAULT_QUEUE_WORKER_METRICS },
+        };
+    }
+    else {
+        const current = globalState.__aysGhQueueState;
+        globalState.__aysGhQueueState = {
+            commandClient: current.commandClient ?? null,
+            started: current.started ?? false,
+            startPromise: current.startPromise ?? null,
+            metrics: normalizeQueueWorkerMetrics(current.metrics),
         };
     }
     return globalState.__aysGhQueueState;
 };
+const getGitHubQueueRuntimeMetrics = () => {
+    const state = getWorkerState();
+    const metrics = normalizeQueueWorkerMetrics(state.metrics);
+    return {
+        started: state.started,
+        has_command_client: Boolean(state.commandClient),
+        worker_starts: metrics.worker_starts,
+        enqueued: metrics.enqueued,
+        worker_processed: metrics.worker_processed,
+        responses_stored: metrics.responses_stored,
+        responses_consumed: metrics.responses_consumed,
+        retries_scheduled: metrics.retries_scheduled,
+        timeouts: metrics.timeouts,
+    };
+};
+exports.getGitHubQueueRuntimeMetrics = getGitHubQueueRuntimeMetrics;
 const getRedisUrl = () => {
     const redisUrl = process.env.REDIS_URL?.trim();
     if (!redisUrl) {
@@ -77,6 +120,8 @@ const getCommandClient = () => {
     state.commandClient = client;
     return client;
 };
+const getGitHubQueueCommandClient = () => getCommandClient();
+exports.getGitHubQueueCommandClient = getGitHubQueueCommandClient;
 const isGitHubQueueRequestKind = (value) => {
     return (value === 'get_user' ||
         value === 'list_user_public_events' ||
@@ -224,6 +269,8 @@ const computeRetryDelayMs = (error, attempt) => {
 const resultKey = (requestId) => `${RESULT_KEY_PREFIX}${requestId}`;
 const storeQueueResponse = async (redis, requestId, response) => {
     await redis.set(resultKey(requestId), JSON.stringify(response), 'PX', RESULT_TTL_MS);
+    const state = getWorkerState();
+    state.metrics.responses_stored += 1;
 };
 const executeQueueRequest = async (request) => {
     const client = (0, raw_client_1.createRawGitHubClient)({ token: request.token });
@@ -260,8 +307,12 @@ const scheduleRetry = async (redis, request, error) => {
     };
     const retryAt = Date.now() + computeRetryDelayMs(error, request.attempt);
     await redis.zadd(DELAYED_ZSET_KEY, retryAt.toString(), JSON.stringify(retryRequest));
+    const state = getWorkerState();
+    state.metrics.retries_scheduled += 1;
 };
 const processQueueMessage = async (commandRedis, workerRedis, messageId, request) => {
+    const state = getWorkerState();
+    state.metrics.worker_processed += 1;
     try {
         const data = await executeQueueRequest(request);
         await storeQueueResponse(commandRedis, request.request_id, {
@@ -393,6 +444,7 @@ const ensureQueueWorkersStarted = async () => {
         const reclaimConsumer = `${CONSUMER_PREFIX}-reclaim-${(0, node_crypto_1.randomUUID)().slice(0, 6)}`;
         void runPendingReclaimLoop(commandRedis, reclaimRedis, reclaimConsumer);
         state.started = true;
+        state.metrics.worker_starts += 1;
     })();
     try {
         await state.startPromise;
@@ -413,12 +465,16 @@ const waitForQueueResponse = async (requestId, timeoutMs) => {
         if (raw) {
             await commandRedis.del(key);
             const parsed = JSON.parse(raw);
+            const state = getWorkerState();
+            state.metrics.responses_consumed += 1;
             if (parsed.ok) {
                 return parsed.data;
             }
             throw restoreQueueError(parsed.error);
         }
         if (Date.now() >= deadline) {
+            const state = getWorkerState();
+            state.metrics.timeouts += 1;
             throw new errors_1.GitHubError('GitHub request timed out while waiting for queue.', 504);
         }
         await (0, promises_1.setTimeout)(50);
@@ -439,6 +495,8 @@ const enqueueAndWait = async (kind, payload, options) => {
         enqueued_at: new Date().toISOString(),
     };
     await commandRedis.xadd(STREAM_KEY, '*', 'job', JSON.stringify(request));
+    const state = getWorkerState();
+    state.metrics.enqueued += 1;
     const data = await waitForQueueResponse(request.request_id, REQUEST_TIMEOUT_MS);
     return data;
 };

@@ -40,24 +40,26 @@ export default function FeedbackForm() {
       className="flex w-full flex-col gap-4 text-left"
     >
       <label className="font-mono text-xs text-muted-foreground">
-        Your feedback
+        tell us what felt off, what was spot on, or just yell into the void
       </label>
       <Textarea
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         rows={5}
-        placeholder="Tell us what felt fair, what felt off, and what to fix next."
+        placeholder="your score was mass injustice because..."
         className="rounded-xl"
       />
       <Button type="submit" className="h-11 rounded-xl">
         {status === 'sending'
-          ? 'Sending...'
+          ? 'Transmitting grievance...'
           : status === 'sent'
-            ? 'Thanks!'
-            : 'Send feedback'}
+            ? 'Duly noted.'
+            : 'Send it'}
       </Button>
       {status === 'error' ? (
-        <p className="text-xs text-primary">Something went wrong. Try again.</p>
+        <p className="text-xs text-primary">
+          The void rejected your message. Try again.
+        </p>
       ) : null}
     </form>
   )

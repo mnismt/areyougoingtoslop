@@ -17,6 +17,9 @@ Optional:
 - Verify `/api/score/[username]/jobs` returns a snapshot.
 - Verify `/api/score/jobs/[jobId]` progresses from `queued/running` to terminal state.
 - Verify unknown job ids return `404` with `error: "job_not_found"`.
+- Verify `/api/queue/github` returns queue health with `cache-control: no-store`.
+- Verify `/api/queue/github` includes `client_selection` and `runtime` diagnostics.
+- Verify `/ops/queue` renders live queue metrics.
 - Confirm `/api/og/[username]` renders a card image.
 
 ## Launch
@@ -31,4 +34,6 @@ Optional:
 - Start job: `curl -s -X POST "http://localhost:3000/api/score/<username>/jobs"`
 - Poll job: `curl -s "http://localhost:3000/api/score/jobs/<job_id>"`
 - Missing job behavior: `curl -i "http://localhost:3000/api/score/jobs/does-not-exist"`
+- Queue snapshot: `curl -s "http://localhost:3000/api/queue/github"`
 - Queue activity check (optional): `redis-cli --raw KEYS "ays:gh:req:*"`
+- Burst check (recommended): start 4-8 parallel `/api/score/<username>/jobs` requests and confirm `client_selection.queued`, `runtime.enqueued`, and `queue.processed_entries` rise.
