@@ -11,6 +11,7 @@
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — Server logic: ingestion → scoring → caching → leaderboard.
 - [`CONVENTIONS.md`](./CONVENTIONS.md) — Structure, naming, scripts, and Definition of Done.
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) — Deployment guide.
+- [`og-system.md`](./og-system.md) — Open Graph image generation system.
 
 ## Operations
 - [`queue-operations.md`](./queue-operations.md) — Queue verification, observability, and debugging.

@@ -25,14 +25,14 @@ export const metadata: Metadata = {
     title: 'areyougoingslop',
     description:
       'how much of your github profile is ai slop? paste a username and find out.',
-    images: ['/api/og/default'],
+    images: ['/api/og/default.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'areyougoingslop',
     description:
       'how much of your github profile is ai slop? paste a username and find out.',
-    images: ['/api/og/default'],
+    images: ['/api/og/default.png'],
   },
 }
 
