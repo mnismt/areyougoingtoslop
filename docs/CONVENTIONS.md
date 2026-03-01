@@ -60,6 +60,7 @@ Scores are weighted by recency so current behavior matters most:
 - Tests pass (or new tests added with rationale)
 - Mark completed items as `[x]` in `docs/roadmap/epic-*.md`
 - Docs updated if behavior/contract changed
+- UI changes adhere to `docs/DESIGN.md` guidelines
 
 ## Folder Conventions
 

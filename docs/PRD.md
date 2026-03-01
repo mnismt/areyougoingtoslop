@@ -112,6 +112,7 @@ This keeps score reflective of current behavior rather than old habits.
 - Roasts should be playful, not abusive.
 - Every score must include concise explanation.
 - Result card must be visually premium + memeable.
+- UI Design must adhere to a highly tactile and polished "vibes" standard utilizing pure CSS + Tailwind (refer to `DESIGN.md` for specific animation guidelines).
 
 ---
 
