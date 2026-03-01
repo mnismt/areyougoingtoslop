@@ -68,6 +68,7 @@ export type AnalyzedCommit = {
 export type SlopScoreResult = {
   slop_score: number
   tier: string
+  tier_tagline: string
   confidence: 'low' | 'medium' | 'high'
   top_signals: string[]
   scoring_window: string
@@ -145,8 +146,25 @@ const computeWeightedStrength = (
   return (weightedStrength / totalWeight) * 100
 }
 
+const INIT_COMMIT_MESSAGES = new Set([
+  'init',
+  'initial',
+  'initial commit',
+  'first commit',
+  'bootstrap',
+  'scaffold',
+  'initial version',
+  'project init',
+  'repo init',
+  'initialize',
+  'initialise',
+])
+
 const genericMessage = (message: string) => {
   const trimmed = message.trim().toLowerCase()
+  if (INIT_COMMIT_MESSAGES.has(trimmed)) {
+    return false
+  }
   if (trimmed.length <= 6) {
     return true
   }
@@ -264,35 +282,35 @@ export const computeSlopScore = (
   const signalResults: SignalResult[] = [
     {
       key: 'ai_keywords',
-      label: 'Commits with AI-attribution hints',
+      label: 'commits with AI-attribution hints',
       score: aiKeywordScore,
       weight: config.weights.ai_keywords,
       contribution: aiKeywordScore * config.weights.ai_keywords,
     },
     {
       key: 'prompt_crumbs',
-      label: 'Prompt crumbs left in the crime scene',
+      label: 'prompt crumbs left in the crime scene',
       score: promptCrumbScore,
       weight: config.weights.prompt_crumbs,
       contribution: promptCrumbScore * config.weights.prompt_crumbs,
     },
     {
       key: 'velocity_volume',
-      label: 'Suspicious velocity spikes',
+      label: 'suspicious velocity spikes',
       score: velocityScore,
       weight: config.weights.velocity_volume,
       contribution: velocityScore * config.weights.velocity_volume,
     },
     {
       key: 'apathy_ratio',
-      label: 'Massive diffs, zero explanation',
+      label: 'massive diffs, zero explanation',
       score: apathyScore,
       weight: config.weights.apathy_ratio,
       contribution: apathyScore * config.weights.apathy_ratio,
     },
     {
       key: 'churn',
-      label: 'Code churn that screams generate-paste-pray',
+      label: 'code churn that screams generate-paste-pray',
       score: churnScore,
       weight: config.weights.churn,
       contribution: churnScore * config.weights.churn,
@@ -306,7 +324,7 @@ export const computeSlopScore = (
 
   const slopScore = clamp(Math.round(weightedScore))
   const confidence = computeConfidence(weightedEvents.length, statsCoverage)
-  const tier = mapScoreToTier(slopScore)
+  const tierInfo = mapScoreToTier(slopScore)
 
   const topSignals = signalResults
     .filter((signal) => signal.score > 0)
@@ -315,7 +333,7 @@ export const computeSlopScore = (
     .map((signal) => signal.label)
 
   if (topSignals.length === 0) {
-    topSignals.push('Not enough evidence to convict (yet)')
+    topSignals.push('not enough evidence to convict (yet)')
   }
 
   const aiKeywordShas = new Set(aiKeywordMatches.map((m) => m.event.sha))
@@ -344,7 +362,8 @@ export const computeSlopScore = (
 
   return {
     slop_score: slopScore,
-    tier,
+    tier: tierInfo.name,
+    tier_tagline: tierInfo.tagline,
     confidence,
     top_signals: topSignals,
     scoring_window: 'last 180 days',

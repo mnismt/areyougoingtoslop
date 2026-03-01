@@ -62,6 +62,7 @@ Positioning: **playful + directionally credible**, not forensic proof.
    - Unusually large diffs in short intervals (non-merge commits only).
 3. **Apathy Ratio**
    - Very large commit + very short/generic message (`fix`, `update`, `wip`).
+   - Conventional initial commit messages (`init`, `initial commit`, `first commit`, `bootstrap`, etc.) are excluded — they represent a legitimate pattern, not AI laziness.
 4. **Churn Pattern**
    - Repeated large rewrites in non-merge commits over short windows.
 5. **Prompt Crumbs**
@@ -120,7 +121,7 @@ This keeps score reflective of current behavior rather than old habits.
 
 ## 9) Trust, Safety, and Legal
 - Clear disclaimer: **satirical heuristic, not factual detector**.
-- Consolidated `/fine-print` page (terms, privacy, removal policy, feedback form).
+- Consolidated `/fine-print` page (terms, privacy, removal policy, author contact).
 - Confidence-based verdict line on every score (low/medium/high).
 - No claims of certainty or misconduct.
 - Respect GitHub API rate limits and data usage terms.
@@ -131,7 +132,7 @@ This keeps score reflective of current behavior rather than old habits.
 | `/` | Homepage — username input, hall of shame preview, signal explainers |
 | `/u/[username]` | Score results — investigation view → score card + stats + signals + commits |
 | `/leaderboard` | Wall of Shame — top 50 ranked by slop score |
-| `/fine-print` | Consolidated terms, privacy, removal, and feedback |
+| `/fine-print` | Consolidated terms, privacy, removal, and author contact |
 
 ---
 

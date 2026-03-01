@@ -31,3 +31,10 @@ export class GitHubValidationError extends Error {
     this.name = 'GitHubValidationError'
   }
 }
+
+export class GitHubOrganizationError extends GitHubError {
+  constructor(message = 'GitHub organization accounts are not supported') {
+    super(message, 422)
+    this.name = 'GitHubOrganizationError'
+  }
+}

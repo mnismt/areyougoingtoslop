@@ -95,7 +95,7 @@ describe('computeSlopScore', () => {
     const result = computeSlopScore(events, undefined, now)
     assert.equal(result.slop_score, 21)
     assert.deepEqual(result.analyzed_commits[0]?.flags, ['ai_keyword'])
-    assert.equal(result.top_signals[0], 'Commits with AI-attribution hints')
+    assert.equal(result.top_signals[0], 'commits with AI-attribution hints')
   })
 
   it('scores explicit AI attribution as strong evidence', () => {
@@ -114,7 +114,7 @@ describe('computeSlopScore', () => {
     const result = computeSlopScore(events, undefined, now)
     assert.equal(result.slop_score, 35)
     assert.deepEqual(result.analyzed_commits[0]?.flags, ['ai_keyword'])
-    assert.equal(result.top_signals[0], 'Commits with AI-attribution hints')
+    assert.equal(result.top_signals[0], 'commits with AI-attribution hints')
   })
 
   it('ignores merge commits for AI attribution scoring', () => {
@@ -137,6 +137,28 @@ describe('computeSlopScore', () => {
     const result = computeSlopScore(events, undefined, now)
     assert.equal(result.slop_score, 0)
     assert.deepEqual(result.analyzed_commits[0]?.flags, [])
+  })
+
+  it('does not flag initial commits as large_generic even with many additions', () => {
+    const now = new Date('2026-02-28T00:00:00.000Z')
+    const events: ContributionEvent[] = [
+      {
+        id: 'a',
+        type: 'commit',
+        repo: 'yyx990803/bun-vs-node-sea-startup',
+        sha: 'de8555d',
+        message: 'init',
+        occurredAt: '2026-02-25T00:00:00.000Z',
+        additions: 500,
+        deletions: 0,
+      },
+    ]
+
+    const result = computeSlopScore(events, undefined, now)
+    assert.equal(
+      result.analyzed_commits[0]?.flags.includes('large_generic'),
+      false,
+    )
   })
 
   it('does not classify merge commits as churn storm', () => {
@@ -162,12 +184,12 @@ describe('computeSlopScore', () => {
       false,
     )
     assert.equal(
-      result.top_signals.includes('Suspicious velocity spikes'),
+      result.top_signals.includes('suspicious velocity spikes'),
       false,
     )
     assert.equal(
       result.top_signals.includes(
-        'Code churn that screams generate-paste-pray',
+        'code churn that screams generate-paste-pray',
       ),
       false,
     )
@@ -176,10 +198,30 @@ describe('computeSlopScore', () => {
 
 describe('mapScoreToTier', () => {
   it('maps score to tier boundaries', () => {
-    assert.equal(mapScoreToTier(5), 'The Artisanal Masochist')
-    assert.equal(mapScoreToTier(25), 'The Tab-Key Athlete')
-    assert.equal(mapScoreToTier(45), 'The LLM Diplomat')
-    assert.equal(mapScoreToTier(70), 'The Agent Supervisor')
-    assert.equal(mapScoreToTier(99), 'The Unsupervised Slop Machine')
+    assert.equal(mapScoreToTier(0).name, 'the untouched keyboard')
+    assert.equal(mapScoreToTier(8).name, 'the untouched keyboard')
+    assert.equal(mapScoreToTier(9).name, 'the tab-key athlete')
+    assert.equal(mapScoreToTier(22).name, 'the tab-key athlete')
+    assert.equal(mapScoreToTier(23).name, 'the prompt-curious')
+    assert.equal(mapScoreToTier(40).name, 'the prompt-curious')
+    assert.equal(mapScoreToTier(41).name, 'the context window regular')
+    assert.equal(mapScoreToTier(60).name, 'the context window regular')
+    assert.equal(mapScoreToTier(61).name, 'the delegation economy')
+    assert.equal(mapScoreToTier(75).name, 'the delegation economy')
+    assert.equal(mapScoreToTier(76).name, 'the fully cooked instance')
+    assert.equal(mapScoreToTier(90).name, 'the fully cooked instance')
+    assert.equal(mapScoreToTier(91).name, 'the unsupervised slop machine')
+    assert.equal(mapScoreToTier(100).name, 'the unsupervised slop machine')
+  })
+
+  it('includes taglines for all tiers', () => {
+    assert.equal(
+      mapScoreToTier(5).tagline,
+      'you debug with print statements. respect.',
+    )
+    assert.equal(
+      mapScoreToTier(95).tagline,
+      'are they even there? hello? anyone home?',
+    )
   })
 })

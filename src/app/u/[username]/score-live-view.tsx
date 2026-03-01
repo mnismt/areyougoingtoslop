@@ -23,6 +23,7 @@ export type AnalyzedCommit = {
 type ScoreResponse = {
   slop_score: number
   tier: string
+  tier_tagline: string
   confidence: 'low' | 'medium' | 'high'
   top_signals: string[]
   scoring_window: string
@@ -56,6 +57,7 @@ type ScoreJobSnapshot = {
   error: {
     code:
       | 'invalid_username'
+      | 'is_organization'
       | 'not_found'
       | 'job_not_found'
       | 'rate_limited'
@@ -68,6 +70,7 @@ type ScoreJobSnapshot = {
 type ScoreJobErrorPayload = {
   error:
     | 'invalid_username'
+    | 'is_organization'
     | 'not_found'
     | 'job_not_found'
     | 'rate_limited'
@@ -105,13 +108,95 @@ const ErrorState = ({
   title: string
   description: string
 }) => (
-  <div className="rounded-xl border border-border bg-card p-8 text-left">
-    <p className="font-mono text-xs text-muted-foreground">{title}</p>
-    <p className="mt-4 text-sm text-muted-foreground">{description}</p>
-    <Button variant="outline" asChild className="mt-6 font-mono text-xs">
-      <Link href="/">snitch on someone else</Link>
-    </Button>
-  </div>
+  <>
+    <div className="rounded-xl border border-border bg-card p-8 text-left animate-rise">
+      <p className="font-mono text-xs text-muted-foreground">{title}</p>
+      <p className="mt-4 text-sm text-muted-foreground">{description}</p>
+      <Button variant="outline" asChild className="mt-6 font-mono text-xs">
+        <Link href="/">snitch on someone else</Link>
+      </Button>
+    </div>
+    <p className="text-center font-mono text-xs text-muted-foreground">
+      entertainment purposes only. no developers were harmed. some were humbled.
+    </p>
+    <SiteFooter />
+  </>
+)
+
+const OrganizationErrorState = ({ username }: { username: string }) => (
+  <>
+    <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:gap-8 sm:p-8 animate-rise">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Image
+          src={`https://github.com/${username}.png`}
+          alt={`${username}'s avatar`}
+          width={56}
+          height={56}
+          className="h-12 w-12 rounded-full bg-muted sm:h-14 sm:w-14"
+          unoptimized
+        />
+        <div className="flex flex-col gap-0.5 sm:gap-1">
+          <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl">
+            @{username}
+          </h1>
+          <p className="font-mono text-sm text-foreground">collective entity</p>
+          <p className="font-mono text-xs text-muted-foreground">
+            this is an organization, not an individual developer
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-4 sm:gap-6 md:flex-row">
+        <div className="flex flex-col items-center justify-center rounded-full bg-muted/50 p-8 sm:p-10">
+          <span className="text-4xl font-bold text-muted-foreground sm:text-5xl">
+            N/A
+          </span>
+          <span className="mt-2 font-mono text-xs text-muted-foreground">
+            slop score
+          </span>
+        </div>
+        <div className="flex flex-1 flex-col gap-4">
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant="secondary"
+              className="rounded-lg px-3 py-1 font-mono text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+            >
+              organization
+            </Badge>
+            <Badge
+              variant="outline"
+              className="rounded-lg px-3 py-1 font-mono text-xs text-muted-foreground"
+            >
+              not applicable
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            we don't roast organizations. they're just groups of humans trying
+            their best. pick an actual developer.
+          </p>
+          <ShareActions username={username} />
+        </div>
+      </div>
+    </section>
+
+    <section className="grid gap-2 sm:gap-4 md:grid-cols-3">
+      <div className="rounded-xl border border-border bg-card p-3 sm:p-5 text-sm text-muted-foreground animate-rise animate-delay-1">
+        orgs don't write code. they collect stars and pretend
+      </div>
+      <div className="rounded-xl border border-border bg-card p-3 sm:p-5 text-sm text-muted-foreground animate-rise animate-delay-1">
+        find a human with a pulse and commits
+      </div>
+      <div className="rounded-xl border border-border bg-card p-3 sm:p-5 text-sm text-muted-foreground animate-rise animate-delay-1">
+        no mob rule here. single targets only
+      </div>
+    </section>
+
+    <p className="text-center font-mono text-xs text-muted-foreground">
+      entertainment purposes only. no developers were harmed. some were humbled.
+    </p>
+
+    <SiteFooter />
+  </>
 )
 
 const detectionSteps = [
@@ -554,6 +639,14 @@ const mapErrorToState = (snapshot: ScoreJobSnapshot | null) => {
     }
   }
 
+  if (snapshot.error.code === 'is_organization') {
+    return {
+      title: 'collective entity detected',
+      description:
+        "we don't roast organizations. they're just groups of humans trying their best. pick an actual developer.",
+    }
+  }
+
   return {
     title: 'the vibes are unclear',
     description:
@@ -709,6 +802,13 @@ export default function ScoreLiveView({ username }: { username: string }) {
     }
   }, [username])
 
+  if (
+    snapshot?.status === 'failed' &&
+    snapshot.error?.code === 'is_organization'
+  ) {
+    return <OrganizationErrorState username={username} />
+  }
+
   const mappedError = mapErrorToState(snapshot)
   if (mappedError) {
     return (
@@ -775,8 +875,9 @@ export default function ScoreLiveView({ username }: { username: string }) {
                 <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl">
                   @{username}
                 </h1>
-                <p className="font-mono text-sm text-muted-foreground">
-                  {data.tier}
+                <p className="font-mono text-sm text-foreground">{data.tier}</p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {data.tier_tagline}
                 </p>
               </div>
             </div>

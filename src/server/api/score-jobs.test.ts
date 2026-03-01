@@ -33,9 +33,10 @@ describe('score jobs', () => {
       'octocat',
       {
         slop_score: 33,
-        tier: 'The Tab-Key Athlete',
+        tier: 'the prompt-curious',
+        tier_tagline: 'just a couple of tokens between old you and new you',
         confidence: 'medium',
-        top_signals: ['Commit messages mention AI tools'],
+        top_signals: ['commit messages mention AI tools'],
         scoring_window: 'last 180 days',
         analyzed_commits: [
           {
@@ -79,7 +80,8 @@ describe('createOrAttachScoreJob dedup', () => {
       'dedup-user',
       {
         slop_score: 50,
-        tier: 'The Tab-Key Athlete',
+        tier: 'the context window regular',
+        tier_tagline: 'you have a system prompt and a ritual',
         confidence: 'medium',
         top_signals: ['test signal'],
         scoring_window: 'last 180 days',
@@ -113,7 +115,8 @@ describe('createOrAttachScoreJob username handling', () => {
       'octocat',
       {
         slop_score: 20,
-        tier: 'Artisanal Organic Code',
+        tier: 'the tab-key athlete',
+        tier_tagline: 'autocomplete exists. you choose not to know.',
         confidence: 'low',
         top_signals: [],
         scoring_window: 'last 180 days',
@@ -171,7 +174,8 @@ describe('getScoreJob retrieval', () => {
       'retrieve-user',
       {
         slop_score: 25,
-        tier: 'The Tab-Key Athlete',
+        tier: 'the prompt-curious',
+        tier_tagline: 'just a couple of tokens between old you and new you',
         confidence: 'low',
         top_signals: [],
         scoring_window: 'last 180 days',
@@ -202,7 +206,8 @@ describe('getScoreJob retrieval', () => {
       'other-user',
       {
         slop_score: 10,
-        tier: 'Artisanal Organic Code',
+        tier: 'the tab-key athlete',
+        tier_tagline: 'autocomplete exists. you choose not to know.',
         confidence: 'low',
         top_signals: [],
         scoring_window: 'last 180 days',
@@ -227,7 +232,8 @@ describe('snapshot shape', () => {
       'shape-user',
       {
         slop_score: 40,
-        tier: 'The Tab-Key Athlete',
+        tier: 'the prompt-curious',
+        tier_tagline: 'just a couple of tokens between old you and new you',
         confidence: 'medium',
         top_signals: ['signal1'],
         scoring_window: 'last 180 days',
@@ -279,7 +285,8 @@ describe('coverage computation from cache', () => {
       'coverage-user',
       {
         slop_score: 60,
-        tier: 'The Copilot Whisperer',
+        tier: 'the context window regular',
+        tier_tagline: 'you have a system prompt and a ritual',
         confidence: 'high',
         top_signals: [],
         scoring_window: 'last 180 days',
@@ -335,7 +342,8 @@ describe('clearScoreJobs', () => {
         'clear-user',
         {
           slop_score: 10,
-          tier: 'Artisanal Organic Code',
+          tier: 'the tab-key athlete',
+          tier_tagline: 'autocomplete exists. you choose not to know.',
           confidence: 'low',
           top_signals: [],
           scoring_window: 'last 180 days',

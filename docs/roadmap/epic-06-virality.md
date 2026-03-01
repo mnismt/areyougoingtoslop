@@ -16,6 +16,7 @@ Make results easy to share and optimized for social spread.
 - [x] Add share CTA (`Copy receipt` / `Download evidence`)
 - [x] Ensure score page metadata is social-preview ready
 - [x] Add screenshot-friendly result layout
+- [x] Share buttons: X (Twitter) and Reddit — icons from svgl, monochrome (`currentColor`)
 
 ## Dependencies
 - Epic 05 completed result view.

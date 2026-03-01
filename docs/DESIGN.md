@@ -32,6 +32,7 @@ All UI text must be **lowercase**. This includes:
 - Score colors (green, amber, rose) appear **only** on score numbers and small status indicators — never on card borders, glows, or backgrounds.
 - The primary rose accent is used sparingly: CTAs, active states, and the "slop" gradient text.
 - Borders are barely visible (`rgba(255,255,255,0.07)` in dark mode). Cards float through subtle elevation, not outlined containment.
+- **Third-party brand icons** (e.g. social share buttons) must use `fill="currentColor"` — no brand colors. Icons live in `src/components/icons/` and are sourced from [svgl](https://svgl.app).
 
 ### 3. Tooltips & Contextual Help
 

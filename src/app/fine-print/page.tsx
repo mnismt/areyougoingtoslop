@@ -1,12 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SiteFooter } from '@/app/components/site-footer'
-import FeedbackForm from './feedback-form'
 
 export const metadata: Metadata = {
   title: 'fine print',
   description:
-    'what this is, what we touch, and how to get off the leaderboard.',
+    'what this is, what i touch, and how to get off the leaderboard.',
 }
 
 export default function FinePrintPage() {
@@ -26,7 +25,7 @@ export default function FinePrintPage() {
           the fine print
         </h1>
         <p className="font-mono text-xs text-muted-foreground">
-          the lawyers made us
+          the lawyers made me
         </p>
       </header>
 
@@ -34,32 +33,43 @@ export default function FinePrintPage() {
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">what this is</h2>
           <p className="text-sm text-muted-foreground">
-            this is a satirical heuristic&mdash;a vibe check with delusions of
+            this is a satirical heuristic. a vibe check with delusions of
             grandeur. do not use this to hire, fire, grade, or shame anyone. use
             it to screenshot and send to your group chat.
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">what we touch</h2>
+          <h2 className="text-lg font-semibold">what i touch</h2>
           <p className="text-sm text-muted-foreground">
-            public GitHub API only. no login. no private repos. we store
-            username + score for the leaderboard. we don&apos;t sell data. we
-            barely have data.
+            public github api only. no login. no private repos. i store username
+            + score for the leaderboard. i don&apos;t sell data. i barely have
+            data.
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">removal</h2>
           <p className="text-sm text-muted-foreground">
-            want off the leaderboard? contact the maintainers. we'll probably
-            ignore it, but occasionally we feel something.
+            want off the leaderboard? contact me. i'll probably ignore it, but
+            occasionally i feel something.
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">got a bone to pick?</h2>
-          <FeedbackForm />
+          <p className="text-sm text-muted-foreground">
+            complain to{' '}
+            <a
+              href="https://x.com/leodoan_"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              @leodoan_
+            </a>
+            . i probably won't care, but go ahead and try.
+          </p>
         </div>
       </section>
 

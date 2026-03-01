@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { RedditIcon } from '@/components/icons/reddit'
+import { XIcon } from '@/components/icons/x'
 import { Button } from '@/components/ui/button'
 
 type ShareActionsProps = {
@@ -23,15 +25,18 @@ const copyToClipboard = async (text: string) => {
   document.body.removeChild(textarea)
 }
 
+const shareButtonClass =
+  'inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-muted text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+
 export default function ShareActions({ username }: ShareActionsProps) {
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle')
-  const [downloadState, setDownloadState] = useState<'idle' | 'busy' | 'done'>(
-    'idle',
-  )
+
+  const url = `https://areyougoingslop.com/u/${username}`
+  const shareText = `we checked @${username}'s github commits for signs of ai slop. the results are in.`
 
   const handleCopy = async () => {
     try {
-      await copyToClipboard(window.location.href)
+      await copyToClipboard(url)
       setCopyState('done')
       setTimeout(() => setCopyState('idle'), 2000)
     } catch {
@@ -39,55 +44,51 @@ export default function ShareActions({ username }: ShareActionsProps) {
     }
   }
 
-  const handleDownload = async () => {
-    if (downloadState === 'busy') {
-      return
-    }
-    setDownloadState('busy')
-    try {
-      const response = await fetch(`/api/og/${username}`, {
-        cache: 'no-store',
-      })
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `areyougoingslop-${username}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      setDownloadState('done')
-      setTimeout(() => setDownloadState('idle'), 2000)
-    } catch {
-      setDownloadState('idle')
-    }
-  }
-
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <Button
         variant="outline"
         onClick={handleCopy}
         className="font-mono text-xs"
       >
         {copyState === 'done'
-          ? 'Copied!'
+          ? 'copied!'
           : copyState === 'error'
-            ? 'Copy failed'
-            : 'Copy receipt'}
+            ? 'copy failed'
+            : 'copy receipt'}
       </Button>
-      <Button
-        variant="outline"
-        onClick={handleDownload}
-        className="font-mono text-xs"
-      >
-        {downloadState === 'done'
-          ? 'Saved!'
-          : downloadState === 'busy'
-            ? 'Saving...'
-            : 'Download evidence'}
-      </Button>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            window.open(
+              `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`,
+              '_blank',
+              'noopener,noreferrer,width=600,height=600',
+            )
+          }
+          className={shareButtonClass}
+          aria-label="share on x"
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            window.open(
+              `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(shareText)}`,
+              '_blank',
+              'noopener,noreferrer,width=600,height=600',
+            )
+          }
+          className={shareButtonClass}
+          aria-label="share on reddit"
+        >
+          <RedditIcon className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }

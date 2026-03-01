@@ -3,10 +3,12 @@ import { performance } from 'node:perf_hooks'
 import { getCachedScore, setCachedScore } from '../cache'
 import {
   GitHubNotFoundError,
+  GitHubOrganizationError,
   GitHubRateLimitError,
   GitHubValidationError,
   isValidGitHubUsername,
 } from '../github'
+import { createGitHubClient } from '../github/client'
 import { upsertLeaderboardEntry } from '../leaderboard'
 import { getScoreP95, recordScoreTiming } from '../perf/metrics'
 import {
@@ -24,7 +26,12 @@ import {
 export type ScoreJobStatus = 'queued' | 'running' | 'completed' | 'failed'
 
 export type ScoreJobError = {
-  code: 'invalid_username' | 'not_found' | 'rate_limited' | 'server_error'
+  code:
+    | 'invalid_username'
+    | 'is_organization'
+    | 'not_found'
+    | 'rate_limited'
+    | 'server_error'
   message: string
   reset_at?: string
 }
@@ -174,13 +181,17 @@ const clearActiveJobInRedis = async (username: string, jobId: string) => {
   }
 }
 
-const getActiveJobIdFromRedis = async (username: string): Promise<string | null> => {
+const getActiveJobIdFromRedis = async (
+  username: string,
+): Promise<string | null> => {
   const redis = getScoreJobRedis()
   if (!redis) return null
   return redis.get(`${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`)
 }
 
-const getJobSnapshotFromRedis = async (jobId: string): Promise<ScoreJobSnapshot | null> => {
+const getJobSnapshotFromRedis = async (
+  jobId: string,
+): Promise<ScoreJobSnapshot | null> => {
   const redis = getScoreJobRedis()
   if (!redis) return null
   const raw = await redis.get(`${SCORE_JOB_KEY_PREFIX}${jobId}`)
@@ -197,6 +208,13 @@ const mapError = (error: unknown): ScoreJobError => {
     return {
       code: 'not_found',
       message: 'GitHub user not found.',
+    }
+  }
+
+  if (error instanceof GitHubOrganizationError) {
+    return {
+      code: 'is_organization',
+      message: 'GitHub organization accounts are not supported.',
     }
   }
 
@@ -268,6 +286,7 @@ const runScoreJob = async (jobId: string) => {
       username: job.username,
       slop_score: result.result.slop_score,
       tier: result.result.tier,
+      tier_tagline: result.result.tier_tagline,
       confidence: result.result.confidence,
       last_scored_at: now.toISOString(),
     })
@@ -310,6 +329,24 @@ export const createOrAttachScoreJob = async (usernameRaw: string) => {
         message: 'Invalid GitHub username.',
       } satisfies ScoreJobError,
     }
+  }
+
+  // Check if this is an organization account
+  const token = process.env.GITHUB_TOKEN
+  const client = createGitHubClient({ token })
+  try {
+    const user = await client.getUser(username)
+    if (user.type === 'Organization') {
+      return {
+        ok: false as const,
+        error: {
+          code: 'is_organization',
+          message: 'Organization accounts are not supported.',
+        } satisfies ScoreJobError,
+      }
+    }
+  } catch {
+    // Let the error propagate through normal scoring flow
   }
 
   const existingJobId = activeByUsername.get(username.toLowerCase())

@@ -19,7 +19,7 @@ describe('leaderboard store', () => {
       {
         username: 'octocat',
         slop_score: 72,
-        tier: 'The Agent Supervisor',
+        tier: 'the delegation economy',
         confidence: 'high',
         last_scored_at: now.toISOString(),
       },
@@ -40,7 +40,7 @@ describe('leaderboard store', () => {
       {
         username: 'low-signal',
         slop_score: 18,
-        tier: 'The Tab-Key Athlete',
+        tier: 'the tab-key athlete',
         confidence: 'low',
         last_scored_at: now.toISOString(),
       },
@@ -51,7 +51,7 @@ describe('leaderboard store', () => {
       {
         username: 'medium-signal',
         slop_score: 44,
-        tier: 'The LLM Diplomat',
+        tier: 'the context window regular',
         confidence: 'medium',
         last_scored_at: now.toISOString(),
       },
@@ -72,7 +72,7 @@ describe('leaderboard store', () => {
       {
         username: 'repeat',
         slop_score: 30,
-        tier: 'The Tab-Key Athlete',
+        tier: 'the prompt-curious',
         confidence: 'medium',
         last_scored_at: now.toISOString(),
       },
@@ -83,7 +83,7 @@ describe('leaderboard store', () => {
       {
         username: 'repeat',
         slop_score: 60,
-        tier: 'The LLM Diplomat',
+        tier: 'the context window regular',
         confidence: 'medium',
         last_scored_at: later.toISOString(),
       },

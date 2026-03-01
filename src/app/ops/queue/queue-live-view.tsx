@@ -31,7 +31,11 @@ const isQueueSnapshot = (value: unknown): value is QueueSnapshot => {
   )
 }
 
-const displayName = (name: string) => name.replace(/^ays-gh-/, '')
+const displayName = (name: string) => {
+  const base = name.replace(/^ays-gh-/, '')
+  const match = base.match(/^w(\d+)$/)
+  return match ? `slop-bot-${match[1]}` : base
+}
 
 const parseSnapshotMs = (timestamp: string) => {
   const parsed = new Date(timestamp).getTime()

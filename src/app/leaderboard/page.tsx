@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { SiteFooter } from '@/app/components/site-footer'
-import { Button } from '@/components/ui/button'
 import { getLeaderboard } from '../../server/leaderboard'
 
 const formatDate = (value: string | null) => {
@@ -67,8 +66,9 @@ export default async function LeaderboardPage() {
         ) : (
           <div className="mt-6 grid gap-3">
             {leaderboard.entries.map((entry, index) => (
-              <div
+              <Link
                 key={entry.username}
+                href={`/u/${entry.username}`}
                 style={{ animationDelay: `${index * 40}ms` }}
                 className="card-lift group flex flex-col gap-4 rounded-lg border border-border bg-card p-4 text-sm md:flex-row md:items-center md:justify-between animate-rise"
               >
@@ -95,7 +95,7 @@ export default async function LeaderboardPage() {
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-[3rem_5rem_7rem_auto] items-center gap-4 font-mono text-xs md:ml-auto">
+                <div className="grid grid-cols-[3rem_5rem_7rem] items-center gap-4 font-mono text-xs md:ml-auto">
                   <span
                     className={`text-lg font-bold text-right ${scoreColor(entry.slop_score)}`}
                   >
@@ -107,16 +107,8 @@ export default async function LeaderboardPage() {
                   <span className="text-muted-foreground text-right">
                     {formatDate(entry.last_scored_at)}
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="font-mono text-xs justify-self-end"
-                  >
-                    <Link href={`/u/${entry.username}`}>inspect</Link>
-                  </Button>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

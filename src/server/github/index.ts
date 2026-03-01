@@ -1,6 +1,7 @@
 export {
   GitHubError,
   GitHubNotFoundError,
+  GitHubOrganizationError,
   GitHubRateLimitError,
   GitHubValidationError,
 } from './errors'

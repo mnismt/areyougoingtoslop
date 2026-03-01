@@ -126,7 +126,7 @@ export default function SlopGauge({ score }: { score: number }) {
           artisan
         </text>
         <text
-          x={CENTER_X + RADIUS + 2}
+          x={CENTER_X + RADIUS - 4}
           y={CENTER_Y + 16}
           textAnchor="middle"
           className="fill-muted-foreground"

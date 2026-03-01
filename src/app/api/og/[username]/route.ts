@@ -6,7 +6,6 @@ import {
 } from '../../../../server/github'
 import { renderOgCard } from '../og-card'
 
-export const runtime = 'edge'
 type Params = {
   params: Promise<{ username: string }>
 }
@@ -18,7 +17,7 @@ export const GET = async (_request: Request, { params }: Params) => {
     return new ImageResponse(
       renderOgCard({
         title: score.tier,
-        subtitle: 'Satirical heuristic. Roast the code, not the coder.',
+        subtitle: score.tier_tagline,
         score: score.slop_score,
         tier: score.tier,
         confidence: score.confidence,
