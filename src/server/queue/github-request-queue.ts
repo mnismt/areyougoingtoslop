@@ -94,6 +94,7 @@ type QueueWorkerState = {
   startPromise: Promise<void> | null
   metrics: QueueWorkerMetrics
   leaderCheckAt: number
+  consumerNames: string[]
 }
 
 type QueueWorkerMetrics = {
@@ -212,6 +213,18 @@ const RECLAIM_INTERVAL_MS = parseBoundedIntegerEnv(
   250,
   60 * 1000,
 )
+const CONSUMER_JANITOR_INTERVAL_MS = parseBoundedIntegerEnv(
+  'GITHUB_QUEUE_CONSUMER_JANITOR_INTERVAL_MS',
+  60 * 1000,
+  5 * 1000,
+  15 * 60 * 1000,
+)
+const CONSUMER_JANITOR_IDLE_MS = parseBoundedIntegerEnv(
+  'GITHUB_QUEUE_CONSUMER_JANITOR_IDLE_MS',
+  15 * 60 * 1000,
+  30 * 1000,
+  7 * 24 * 60 * 60 * 1000,
+)
 const MAX_STREAM_LEN = parseBoundedIntegerEnv(
   'GITHUB_QUEUE_MAX_STREAM_LEN',
   10_000,
@@ -249,6 +262,7 @@ const getWorkerState = (): QueueWorkerState => {
       startPromise: null,
       metrics: { ...DEFAULT_QUEUE_WORKER_METRICS },
       leaderCheckAt: 0,
+      consumerNames: [],
     }
   } else {
     const current = globalState.__aysGhQueueState
@@ -258,6 +272,11 @@ const getWorkerState = (): QueueWorkerState => {
       startPromise: current.startPromise ?? null,
       metrics: normalizeQueueWorkerMetrics(current.metrics),
       leaderCheckAt: current.leaderCheckAt ?? 0,
+      consumerNames: Array.isArray(current.consumerNames)
+        ? current.consumerNames.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [],
     }
   }
 
@@ -416,6 +435,53 @@ const parseXAutoClaimResponse = (
   }
 
   return parseXReadResponse([[STREAM_KEY, entries]])
+}
+
+const toRedisInfoRows = (input: unknown): Record<string, unknown>[] => {
+  if (!Array.isArray(input)) {
+    return []
+  }
+
+  const rows: Record<string, unknown>[] = []
+  for (const entry of input) {
+    if (Array.isArray(entry)) {
+      const row: Record<string, unknown> = {}
+      for (let index = 0; index < entry.length; index += 2) {
+        const key = entry[index]
+        if (typeof key !== 'string') {
+          continue
+        }
+        row[key] = entry[index + 1]
+      }
+      rows.push(row)
+      continue
+    }
+
+    if (typeof entry === 'object' && entry !== null) {
+      rows.push(entry as Record<string, unknown>)
+    }
+  }
+
+  return rows
+}
+
+const toNonNegativeInteger = (value: unknown): number | null => {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      return null
+    }
+    return Math.max(0, Math.trunc(value))
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10)
+    if (Number.isNaN(parsed)) {
+      return null
+    }
+    return Math.max(0, parsed)
+  }
+
+  return null
 }
 
 const serializeQueueError = (error: unknown): SerializedQueueError => {
@@ -782,6 +848,62 @@ const runPendingReclaimLoop = async (
   }
 }
 
+const runConsumerJanitorLoop = async (commandRedis: Redis) => {
+  while (true) {
+    try {
+      const state = getWorkerState()
+      const activeNames = new Set(state.consumerNames)
+      const rawConsumers = await commandRedis.call(
+        'XINFO',
+        'CONSUMERS',
+        STREAM_KEY,
+        GROUP_NAME,
+      )
+      const staleConsumerNames = toRedisInfoRows(rawConsumers)
+        .map((entry) => {
+          const name = typeof entry.name === 'string' ? entry.name : null
+          const pending = toNonNegativeInteger(entry.pending) ?? 0
+          const idleMs = toNonNegativeInteger(entry.idle) ?? 0
+          const inactiveMs = toNonNegativeInteger(entry.inactive)
+          const staleMs = inactiveMs ?? idleMs
+          return { name, pending, staleMs }
+        })
+        .filter(
+          (entry): entry is { name: string; pending: number; staleMs: number } =>
+            entry.name !== null &&
+            !activeNames.has(entry.name) &&
+            entry.pending === 0 &&
+            entry.staleMs >= CONSUMER_JANITOR_IDLE_MS,
+        )
+        .map((entry) => entry.name)
+
+      if (staleConsumerNames.length > 0) {
+        const pipeline = commandRedis.pipeline()
+        for (const consumerName of staleConsumerNames) {
+          pipeline.call(
+            'XGROUP',
+            'DELCONSUMER',
+            STREAM_KEY,
+            GROUP_NAME,
+            consumerName,
+          )
+        }
+        await pipeline.exec()
+        console.info('github_queue_consumer_janitor', {
+          removed: staleConsumerNames.length,
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (!message.toLowerCase().includes('no such key')) {
+        console.warn('github_queue_consumer_janitor_error', { message })
+      }
+    }
+
+    await delay(CONSUMER_JANITOR_INTERVAL_MS)
+  }
+}
+
 const runForever = async (name: string, fn: () => Promise<void>) => {
   for (;;) {
     try {
@@ -877,9 +999,7 @@ const ensureQueueWorkersStarted = async () => {
 
     const workerConsumers: string[] = []
     for (let i = 0; i < WORKER_CONCURRENCY; i += 1) {
-      workerConsumers.push(
-        `${CONSUMER_PREFIX}-${i}-${randomUUID().slice(0, 6)}`,
-      )
+      workerConsumers.push(`${CONSUMER_PREFIX}-w${i}`)
     }
 
     for (const consumerName of workerConsumers) {
@@ -902,9 +1022,14 @@ const ensureQueueWorkersStarted = async () => {
     const reclaimRedis = commandRedis.duplicate({
       maxRetriesPerRequest: null,
     })
-    const reclaimConsumer = `${CONSUMER_PREFIX}-reclaim-${randomUUID().slice(0, 6)}`
+    const reclaimConsumer = `${CONSUMER_PREFIX}-reclaim`
+    state.consumerNames = [...workerConsumers, reclaimConsumer]
     void runForever('github_queue_reclaim', () =>
       runPendingReclaimLoop(commandRedis, reclaimRedis, reclaimConsumer),
+    )
+
+    void runForever('github_queue_consumer_janitor', () =>
+      runConsumerJanitorLoop(commandRedis),
     )
 
     // Start leader lock renewal

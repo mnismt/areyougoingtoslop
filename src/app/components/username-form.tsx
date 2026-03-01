@@ -16,7 +16,7 @@ export default function UsernameForm() {
     event.preventDefault()
     const cleaned = sanitizeUsername(username)
     if (!cleaned) {
-      setError('We need a username. Snitching requires specificity.')
+      setError('we need a username. snitching requires specificity.')
       return
     }
     setError('')
@@ -34,17 +34,17 @@ export default function UsernameForm() {
       >
         suspect
       </label>
-      <div className="relative flex flex-col gap-3 sm:flex-row">
+      <div className="relative flex items-center rounded-xl border border-input bg-transparent shadow-xs transition-[border-color,box-shadow] duration-200 ease-out focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] dark:bg-input/30">
         <Input
           id="username-input"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           placeholder="e.g. your coworker"
-          className="h-12 flex-1 rounded-xl"
+          className="h-12 flex-1 border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0 focus-visible:border-0"
           autoComplete="off"
         />
-        <Button type="submit" className="h-12 rounded-xl px-6">
-          Inspect the vibes
+        <Button type="submit" className="m-1.5 h-9 shrink-0 rounded-lg px-4 text-sm sm:px-6">
+          inspect the vibes
         </Button>
       </div>
       {error ? (

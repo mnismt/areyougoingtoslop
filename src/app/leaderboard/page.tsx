@@ -34,7 +34,10 @@ export default async function LeaderboardPage() {
   const leaderboard = await getLeaderboard({ limit: 50 })
 
   return (
-    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-16">
+    <main
+      id="main-content"
+      className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-6 py-10 animate-rise sm:gap-10 sm:py-16"
+    >
       <header className="flex flex-col gap-4">
         <Link
           href="/"
@@ -43,23 +46,23 @@ export default async function LeaderboardPage() {
           <span className="back-arrow">&larr;</span> back
         </Link>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Wall of Shame
+          wall of shame
         </h1>
         <p className="text-sm text-muted-foreground">
-          The most AI-assisted GitHub profiles we've found so far. Ranked by
-          slop score.
+          the most AI-assisted github profiles we've exposed. ranked by their
+          commitment to outsourcing.
         </p>
       </header>
 
       <section className="rounded-xl border border-border bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
           <span>top 50 offenders</span>
-          <span>Last updated {formatDate(leaderboard.updated_at)}</span>
+          <span>last updated {formatDate(leaderboard.updated_at)}</span>
         </div>
 
         {leaderboard.entries.length === 0 ? (
           <div className="mt-6 rounded-lg border border-border bg-muted/50 p-6 text-sm text-muted-foreground">
-            Nobody's been snitched on yet. Be the change you want to see.
+            nobody's been snitched on yet. that's about to change.
           </div>
         ) : (
           <div className="mt-6 grid gap-3">
@@ -70,7 +73,9 @@ export default async function LeaderboardPage() {
                 className="card-lift group flex flex-col gap-4 rounded-lg border border-border bg-card p-4 text-sm md:flex-row md:items-center md:justify-between animate-rise"
               >
                 <div className="flex items-center gap-4">
-                  <span className={`text-lg font-bold w-8 ${rankDisplay(index)}`}>
+                  <span
+                    className={`text-lg font-bold w-8 ${rankDisplay(index)}`}
+                  >
                     #{index + 1}
                   </span>
                   <Image
@@ -90,25 +95,25 @@ export default async function LeaderboardPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
+                <div className="grid grid-cols-[3rem_5rem_7rem_auto] items-center gap-4 font-mono text-xs md:ml-auto">
                   <span
-                    className={`text-lg font-bold ${scoreColor(entry.slop_score)}`}
+                    className={`text-lg font-bold text-right ${scoreColor(entry.slop_score)}`}
                   >
                     {entry.slop_score}
                   </span>
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground text-center">
                     {entry.confidence}
                   </span>
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground text-right">
                     {formatDate(entry.last_scored_at)}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
                     asChild
-                    className="font-mono text-xs"
+                    className="font-mono text-xs justify-self-end"
                   >
-                    <Link href={`/u/${entry.username}`}>Inspect</Link>
+                    <Link href={`/u/${entry.username}`}>inspect</Link>
                   </Button>
                 </div>
               </div>

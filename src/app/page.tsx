@@ -22,17 +22,17 @@ export default async function Home() {
   const leaderboard = await getLeaderboard({ limit: 6 })
 
   return (
-    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-16 px-6 py-16">
-      <section className="flex flex-col items-center gap-6 text-center animate-rise">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Are you going{' '}
+    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:gap-16 sm:px-6 sm:py-16">
+      <section className="flex flex-col items-center gap-4 text-center animate-rise sm:gap-6">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
+          are you going{' '}
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-rose-400 to-primary animate-gradient-text">
             slop
           </span>
           ?
         </h1>
-        <p className="max-w-lg text-lg text-muted-foreground">
-          Paste a GitHub username. We'll judge their commits so you don't have
+        <p className="max-w-lg text-base text-muted-foreground sm:text-lg">
+          paste a github username. we'll judge their commits so you don't have
           to.
         </p>
         <div className="w-full max-w-md">
@@ -41,7 +41,7 @@ export default async function Home() {
       </section>
 
       {leaderboard.entries.length > 0 && (
-        <section className="flex flex-col gap-6 animate-rise animate-delay-1">
+        <section className="flex flex-col gap-3 animate-rise animate-delay-1 sm:gap-6">
           <div className="flex items-center justify-between">
             <h2 className="font-mono text-xs text-muted-foreground">
               hall of shame

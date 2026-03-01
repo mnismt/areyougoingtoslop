@@ -18,6 +18,7 @@ export type GitHubQueueConsumerSnapshot = {
   pending: number
   idle_ms: number
   inactive_ms: number | null
+  current_usernames: string[]
 }
 
 export type GitHubQueueSnapshot = {
@@ -49,12 +50,16 @@ export type GitHubQueueSnapshot = {
     lag: number | null
     pending: number
     delayed: number
+    known_consumers: number
+    online_consumers: number
     active_consumers: number
     processed_entries: number | null
     next_retry_at: string | null
     next_retry_in_ms: number | null
   }
   consumers: GitHubQueueConsumerSnapshot[]
+  recent_usernames: string[]
+  active_score_usernames: string[]
 }
 
 const toRedisInfoRow = (value: unknown): RedisInfoRow | null => {
@@ -151,17 +156,83 @@ const createSnapshotBase = (
     lag: null,
     pending: 0,
     delayed: 0,
+    known_consumers: 0,
+    online_consumers: 0,
     active_consumers: 0,
     processed_entries: null,
     next_retry_at: null,
     next_retry_in_ms: null,
   },
   consumers: [],
+  recent_usernames: [],
+  active_score_usernames: [],
 })
+
+const ONLINE_CONSUMER_IDLE_MS = 60 * 1000
 
 const isMissingKeyError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)
   return message.toLowerCase().includes('no such key')
+}
+
+const extractUsernameFromRequest = (req: {
+  kind: string
+  payload: unknown
+}): string | null => {
+  const payload = req.payload as Record<string, unknown>
+  switch (req.kind) {
+    case 'get_user':
+    case 'list_user_public_events':
+    case 'list_user_repos':
+      return typeof payload?.username === 'string' ? payload.username : null
+    case 'list_repo_commits': {
+      const query = payload?.query as Record<string, unknown> | undefined
+      return typeof query?.author === 'string' ? query.author : null
+    }
+    case 'get_commit': {
+      // repo_full_name is always "owner/repo" — owner is the user being scored
+      const repoFullName = payload?.repo_full_name
+      if (typeof repoFullName === 'string') {
+        const slash = repoFullName.indexOf('/')
+        return slash > 0 ? repoFullName.slice(0, slash) : null
+      }
+      return null
+    }
+    default:
+      return null
+  }
+}
+
+const parseStreamEntry = (
+  entry: unknown,
+): { id: string; username: string | null } | null => {
+  if (!Array.isArray(entry) || entry.length < 2) return null
+  const id = entry[0]
+  if (typeof id !== 'string') return null
+  const fields = entry[1]
+  if (!Array.isArray(fields)) return null
+
+  for (let i = 0; i < fields.length; i += 2) {
+    if (fields[i] === 'job' && typeof fields[i + 1] === 'string') {
+      try {
+        const req = JSON.parse(fields[i + 1]) as {
+          kind?: string
+          payload?: unknown
+        }
+        if (!req || typeof req.kind !== 'string') return { id, username: null }
+        return {
+          id,
+          username: extractUsernameFromRequest({
+            kind: req.kind,
+            payload: req.payload ?? {},
+          }),
+        }
+      } catch {
+        return { id, username: null }
+      }
+    }
+  }
+  return { id, username: null }
 }
 
 export const getGitHubQueueSnapshot =
@@ -186,11 +257,14 @@ export const getGitHubQueueSnapshot =
     let streamInitialized = false
     let lag: number | null = null
     let pending = 0
-    let activeConsumers = 0
+    let knownConsumers = 0
+    let onlineConsumers = 0
     let processedEntries: number | null = null
     let delayed = 0
     let delayedRetryAtMs: number | null = null
     let consumers: GitHubQueueConsumerSnapshot[] = []
+    let recentUsernames: string[] = []
+    let activeScoreUsernames: string[] = []
 
     const markDegraded = (warning: string) => {
       health = 'degraded'
@@ -214,7 +288,7 @@ export const getGitHubQueueSnapshot =
         streamInitialized = true
         lag = toNonNegativeInteger(group.lag)
         pending = toNonNegativeInteger(group.pending) ?? 0
-        activeConsumers = toNonNegativeInteger(group.consumers) ?? 0
+        knownConsumers = toNonNegativeInteger(group.consumers) ?? 0
         processedEntries =
           toNonNegativeInteger(group['entries-read']) ??
           toNonNegativeInteger(group.entries_read) ??
@@ -244,16 +318,131 @@ export const getGitHubQueueSnapshot =
               pending: toNonNegativeInteger(entry.pending) ?? 0,
               idle_ms: toNonNegativeInteger(entry.idle) ?? 0,
               inactive_ms: toNonNegativeInteger(entry.inactive),
+              current_usernames: [],
             }
           })
           .sort((left, right) => right.pending - left.pending)
 
-        if (consumers.length > 0) {
-          activeConsumers = consumers.length
-        }
+        knownConsumers = consumers.length
+        onlineConsumers = consumers.filter(
+          (consumer) => consumer.idle_ms <= ONLINE_CONSUMER_IDLE_MS,
+        ).length
       } catch {
         markDegraded('Unable to read Redis consumer stats.')
       }
+
+      // Block A: resolve which usernames each worker is currently processing
+      if (pending > 0) {
+        try {
+          const rawPending = await client.call(
+            'XPENDING',
+            GITHUB_QUEUE_STREAM_KEY,
+            GITHUB_QUEUE_GROUP_NAME,
+            '-',
+            '+',
+            '20',
+          )
+
+          if (Array.isArray(rawPending) && rawPending.length > 0) {
+            const consumerToIds = new Map<string, string[]>()
+            const allIds: string[] = []
+
+            for (const entry of rawPending) {
+              if (!Array.isArray(entry) || entry.length < 2) continue
+              const entryId = entry[0]
+              const consumerName = entry[1]
+              if (
+                typeof entryId !== 'string' ||
+                typeof consumerName !== 'string'
+              )
+                continue
+              allIds.push(entryId)
+              if (!consumerToIds.has(consumerName)) {
+                consumerToIds.set(consumerName, [])
+              }
+              consumerToIds.get(consumerName)!.push(entryId)
+            }
+
+            if (allIds.length > 0) {
+              const minId = allIds[0]
+              const maxId = allIds[allIds.length - 1]
+              const rawMessages = await client.call(
+                'XRANGE',
+                GITHUB_QUEUE_STREAM_KEY,
+                minId,
+                maxId,
+              )
+
+              const idToUsername = new Map<string, string>()
+              if (Array.isArray(rawMessages)) {
+                for (const entry of rawMessages) {
+                  const parsed = parseStreamEntry(entry)
+                  if (parsed?.username) {
+                    idToUsername.set(parsed.id, parsed.username)
+                  }
+                }
+              }
+
+              const consumerToUsernames = new Map<string, string[]>()
+              for (const [consumerName, ids] of consumerToIds) {
+                const usernames = [
+                  ...new Set(
+                    ids
+                      .map((id) => idToUsername.get(id))
+                      .filter((u): u is string => Boolean(u)),
+                  ),
+                ]
+                if (usernames.length > 0) {
+                  consumerToUsernames.set(consumerName, usernames)
+                }
+              }
+
+              consumers = consumers.map((consumer) => ({
+                ...consumer,
+                current_usernames:
+                  consumerToUsernames.get(consumer.name) ??
+                  consumer.current_usernames,
+              }))
+            }
+          }
+        } catch {
+          // Best-effort — username data is not critical
+        }
+      }
+    }
+
+    // Block B: recent undelivered entries for queue preview
+    try {
+      const rawPreview = await client.call(
+        'XREVRANGE',
+        GITHUB_QUEUE_STREAM_KEY,
+        '+',
+        '-',
+        'COUNT',
+        '5',
+      )
+      if (Array.isArray(rawPreview)) {
+        const seen = new Set<string>()
+        for (const entry of rawPreview) {
+          const parsed = parseStreamEntry(entry)
+          if (parsed?.username && !seen.has(parsed.username)) {
+            seen.add(parsed.username)
+          }
+        }
+        recentUsernames = [...seen]
+      }
+    } catch {
+      // Best-effort — preview data is not critical
+    }
+
+    // Block C: active score jobs (usernames being scored right now)
+    try {
+      const scoreKeys = await client.keys('ays:score:active:*')
+      activeScoreUsernames = scoreKeys.map((key) =>
+        key.slice('ays:score:active:'.length),
+      )
+    } catch {
+      // Best-effort — active score data is not critical
     }
 
     try {
@@ -293,7 +482,9 @@ export const getGitHubQueueSnapshot =
         lag,
         pending,
         delayed,
-        active_consumers: activeConsumers,
+        known_consumers: knownConsumers,
+        online_consumers: onlineConsumers,
+        active_consumers: onlineConsumers,
         processed_entries: processedEntries,
         next_retry_at: delayedRetryAtMs
           ? new Date(delayedRetryAtMs).toISOString()
@@ -303,6 +494,8 @@ export const getGitHubQueueSnapshot =
           : null,
       },
       consumers,
+      recent_usernames: recentUsernames,
+      active_score_usernames: activeScoreUsernames,
     }
 
     return snapshot

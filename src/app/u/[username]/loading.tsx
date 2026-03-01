@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Loading() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-6 py-16">
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 px-6 py-6 sm:gap-8 sm:py-16">
       <div className="rounded-xl border border-border bg-card p-5 animate-rise">
         <div className="flex items-center justify-between gap-4">
           <Skeleton className="h-4 w-36" />
@@ -26,8 +26,8 @@ export default function Loading() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center">
-          <Skeleton className="h-44 w-full max-w-[220px] rounded-xl" />
+        <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center">
+          <Skeleton className="h-36 w-full max-w-[180px] self-center rounded-xl sm:self-auto" />
           <div className="flex flex-1 flex-col gap-3">
             <Skeleton className="h-6 w-32" />
             <Skeleton className="h-4 w-full" />

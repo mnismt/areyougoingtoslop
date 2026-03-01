@@ -4,10 +4,24 @@ A humorous heuristic app that scores how AI-assisted a GitHub user's public cont
 
 ## Key References
 
-- **PRD:** `docs/PRD.md`
-- **Architecture:** `docs/ARCHITECTURE.md` (ingestion → scoring → caching → leaderboard)
-- **Roadmap:** `docs/roadmap/README.md` + `docs/roadmap/epic-*.md`
-- **Conventions:** `docs/CONVENTIONS.md` (structure, naming, scripts, DoD)
+Start with `docs/README.md` for a full index. Key docs by concern:
+
+### Product & Planning
+- **PRD:** `docs/PRD.md` — product requirements and MVP scope
+- **Roadmap:** `docs/roadmap/README.md` + `docs/roadmap/epic-*.md` — epics & task lists
+- **Design:** `docs/DESIGN.md` — UI/UX guidelines, monochrome-luxe aesthetic, tone
+
+### Engineering
+- **Architecture:** `docs/ARCHITECTURE.md` — ingestion → scoring → caching → leaderboard
+- **Conventions:** `docs/CONVENTIONS.md` — structure, naming, scripts, Definition of Done
+- **Testing:** `docs/TESTING.md` — test strategy, commands (`bun test`), writing new tests
+- **Deployment:** `docs/DEPLOYMENT.md` — env vars, deployment checklist
+
+### Operations
+- **Queue operations:** `docs/queue-operations.md` — verification, observability, and debugging
+
+### Calibration
+- `docs/calibration/README.md` + `calibration-samples.json` — reference profiles for scoring sanity-checks
 
 ## Rules
 

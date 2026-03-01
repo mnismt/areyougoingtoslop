@@ -33,7 +33,7 @@ export default function SlopGauge({ score }: { score: number }) {
     <div className="flex flex-col items-center">
       <svg
         viewBox="0 0 200 120"
-        className="w-56"
+        className="w-44 sm:w-56"
         role="img"
         aria-label={`Slop score gauge showing ${score} out of 100`}
       >

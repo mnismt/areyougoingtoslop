@@ -130,6 +130,27 @@ body {
   }
 }
 
+@keyframes queue-flow-dot {
+  0% {
+    left: 0%;
+    opacity: 0.2;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0.2;
+  }
+}
+
+.queue-flow-dot {
+  animation: queue-flow-dot 2.6s linear infinite;
+}
+
 /* ── Delays ───────────────────────────────────────── */
 .animate-delay-1 {
   animation-delay: 120ms;
@@ -158,7 +179,8 @@ body {
 
 /* ── Gradient text for "slop" ─────────────────────── */
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {

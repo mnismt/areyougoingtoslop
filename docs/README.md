@@ -13,5 +13,4 @@
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) — Deployment guide.
 
 ## Operations
-- [`queue-verification.md`](./queue-verification.md) — Queue/job lifecycle checks and troubleshooting notes.
-- [`queue-observability.md`](./queue-observability.md) — Queue telemetry model, field semantics, and deep debug playbook.
+- [`queue-operations.md`](./queue-operations.md) — Queue verification, observability, and debugging.

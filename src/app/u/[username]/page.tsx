@@ -13,7 +13,7 @@ export const generateMetadata = async ({
   const host = requestHeaders.get('host') ?? 'localhost:3000'
   const protocol = host.includes('localhost') ? 'http' : 'https'
   const title = `@${username} | areyougoingslop`
-  const description = `We checked @${username}'s GitHub commits for signs of AI slop. The results are in.`
+  const description = `we checked @${username}'s github commits for signs of ai slop. the results are in.`
 
   return {
     title,
@@ -41,13 +41,18 @@ export default async function UserScorePage({
   const { username } = await params
 
   return (
-    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-6 py-16">
+    <main
+      id="main-content"
+      className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-4 px-6 py-6 sm:gap-8 sm:py-16"
+    >
       <Link
         href="/"
         className="back-link font-mono text-sm text-muted-foreground hover:text-foreground"
       >
         <span className="font-bold text-foreground">areyougoingslop</span>
-        <span className="ml-2 text-xs"><span className="back-arrow">&larr;</span> back</span>
+        <span className="ml-2 text-xs">
+          <span className="back-arrow">&larr;</span> back
+        </span>
       </Link>
       <ScoreLiveView username={username} />
     </main>

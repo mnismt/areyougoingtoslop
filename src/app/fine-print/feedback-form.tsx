@@ -55,14 +55,14 @@ export default function FeedbackForm() {
       />
       <Button type="submit" className="h-11 rounded-xl">
         {status === 'sending'
-          ? 'Transmitting grievance...'
+          ? 'transmitting grievance...'
           : status === 'sent'
-            ? 'Duly noted.'
+            ? 'duly noted.'
             : 'Send it'}
       </Button>
       {status === 'error' ? (
         <p role="alert" className="text-xs text-primary">
-          The void rejected your message. Try again.
+          the void rejected your message. try again.
         </p>
       ) : null}
     </form>
