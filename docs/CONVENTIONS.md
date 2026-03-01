@@ -53,6 +53,25 @@ Scores are weighted by recency so current behavior matters most:
 | 91–180 days | 0.3 |
 | >180 days | excluded |
 
+## UI Text Conventions
+
+### Casing
+All UI text must be **lowercase** by default. This is a strict design requirement (see `docs/DESIGN.md`).
+
+- Labels, buttons, navigation: always lowercase
+- Score tier names: lowercase (e.g., "the delegation economy")
+- Signal descriptions: lowercase (e.g., "prompt crumbs left in the crime scene")
+- Error messages: lowercase
+- Tooltip content: lowercase
+
+**Exceptions:**
+- User-generated content (usernames, commit messages, repo names)
+- Proper nouns (e.g., "GitHub", "OpenAI")
+- Acronyms where lowercase hurts readability (e.g., "API", "URL")
+
+### Tone
+Keep it witty and playful, never mean-spirited. Roast the behavior, not the person. See `docs/DESIGN.md` for tone guidelines.
+
 ## Definition of Done
 
 - `bun run build` passes
@@ -61,6 +80,7 @@ Scores are weighted by recency so current behavior matters most:
 - Mark completed items as `[x]` in `docs/roadmap/epic-*.md`
 - Docs updated if behavior/contract changed
 - UI changes adhere to `docs/DESIGN.md` guidelines
+- All UI text follows lowercase convention (see UI Text Conventions above)
 
 ## Folder Conventions
 

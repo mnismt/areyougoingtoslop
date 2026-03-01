@@ -148,13 +148,15 @@ slop_score = clamp(round(weighted_score), 0, 100)
 
 ### 2.4 Tiers
 
-| Score | Tier |
-|-------|------|
-| 0–10 | The Artisanal Masochist |
-| 11–30 | The Tab-Key Athlete |
-| 31–60 | The LLM Diplomat |
-| 61–85 | The Agent Supervisor |
-| 86–100 | The Unsupervised Slop Machine |
+| Score | Tier | Tagline |
+|-------|------|---------|
+| 0–8 | the untouched keyboard | you debug with print statements. respect. |
+| 9–22 | the tab-key athlete | autocomplete exists. you choose not to know. |
+| 23–40 | the prompt-curious | just a couple of tokens between old you and new you |
+| 41–60 | the context window regular | you have a system prompt and a ritual |
+| 61–75 | the delegation economy | why code when you can orchestrate? |
+| 76–90 | the fully cooked instance | running on tokens, not thoughts |
+| 91–100 | the unsupervised slop machine | are they even there? hello? anyone home? |
 
 ### 2.5 Confidence
 
@@ -170,9 +172,10 @@ Based on data density:
 ```ts
 {
   slop_score: number        // 0–100
-  tier: string              // roast label
+  tier: string              // roast tier name (lowercase)
+  tier_tagline: string      // one-line flavor text for the tier
   confidence: 'low' | 'medium' | 'high'
-  top_signals: string[]     // up to 3 human-readable reasons
+  top_signals: string[]     // up to 3 human-readable reasons (all lowercase)
   scoring_window: string    // "last 180 days"
   analyzed_commits: Array<{
     sha: string
@@ -181,10 +184,12 @@ Based on data density:
     occurred_at: string
     additions?: number
     deletions?: number
-    flags: string[]
+    flags: string[]         // lowercase flag identifiers
   }>
 }
 ```
+
+**Text formatting:** All UI-facing strings (`tier`, `tier_tagline`, `top_signals`, `flags`) must be lowercase per `docs/DESIGN.md` guidelines.
 
 ### 2.7 Async Job Snapshot Contract (Phase 1)
 ```ts

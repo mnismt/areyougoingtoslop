@@ -84,11 +84,13 @@ This keeps score reflective of current behavior rather than old habits.
 - `scoring_window` (e.g., last 180 days)
 
 ### 6.4 Tier Labels
-- 0–10: **The Artisanal Masochist**
-- 11–30: **The Tab-Key Athlete**
-- 31–60: **The LLM Diplomat**
-- 61–85: **The Agent Supervisor**
-- 86–100: **The Unsupervised Slop Machine**
+- 0–8: **the untouched keyboard** — *you debug with print statements. respect.*
+- 9–22: **the tab-key athlete** — *autocomplete exists. you choose not to know.*
+- 23–40: **the prompt-curious** — *just a couple of tokens between old you and new you*
+- 41–60: **the context window regular** — *you have a system prompt and a ritual*
+- 61–75: **the delegation economy** — *why code when you can orchestrate?*
+- 76–90: **the fully cooked instance** — *running on tokens, not thoughts*
+- 91–100: **the unsupervised slop machine** — *are they even there? hello? anyone home?*
 
 ---
 
