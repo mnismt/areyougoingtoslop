@@ -46,6 +46,9 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <a href="#main-content" className="skip-link">
+            Skip to content
+          </a>
           {children}
         </ThemeProvider>
       </body>

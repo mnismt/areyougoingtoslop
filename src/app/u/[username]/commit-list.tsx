@@ -111,6 +111,7 @@ export default function CommitList({ commits }: { commits: AnalyzedCommit[] }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-xs text-primary hover:underline"
+                  aria-label={`View commit ${commit.sha.slice(0, 7)} on GitHub (opens in new tab)`}
                 >
                   {commit.sha.slice(0, 7)}
                 </a>

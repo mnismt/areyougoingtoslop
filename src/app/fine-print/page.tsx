@@ -11,13 +11,13 @@ export const metadata: Metadata = {
 
 export default function FinePrintPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-16">
+    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-16">
       <header className="flex flex-col gap-4">
         <Link
           href="/"
-          className="font-mono text-xs text-muted-foreground hover:text-foreground"
+          className="back-link font-mono text-xs text-muted-foreground hover:text-foreground"
         >
-          &larr; back
+          <span className="back-arrow">&larr;</span> back
         </Link>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           The fine print

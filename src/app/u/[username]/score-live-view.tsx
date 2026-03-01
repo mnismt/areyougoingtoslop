@@ -98,12 +98,6 @@ const confidenceLine: Record<ScoreResponse['confidence'], string> = {
   high: 'Plenty of receipts. This score has teeth.',
 }
 
-const scoreColorClass = (score: number) => {
-  if (score <= 30) return 'border-score-low'
-  if (score <= 70) return 'border-score-mid'
-  return 'border-score-high'
-}
-
 const ErrorState = ({
   title,
   description,
@@ -187,7 +181,14 @@ const InvestigationView = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
             {progress}%
           </Badge>
         </div>
-        <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+        <div
+          className="mt-3 h-1.5 w-full rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Investigation progress: ${progress}%`}
+        >
           <div
             className="h-1.5 rounded-full bg-primary transition-all duration-1000 ease-out"
             style={{ width: `${Math.max(3, progress)}%` }}
@@ -414,7 +415,14 @@ const MiniProgress = ({ snapshot }: { snapshot: ScoreJobSnapshot }) => {
       </div>
 
       {/* Progress bar */}
-      <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden mb-5">
+      <div
+        className="h-2.5 w-full rounded-full bg-muted overflow-hidden mb-5"
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Investigation progress: ${progress}%`}
+      >
         <div
           className={`h-full rounded-full ${progressColor} transition-all duration-1000 ease-out`}
           style={{ width: `${Math.max(3, progress)}%` }}
@@ -735,7 +743,7 @@ export default function ScoreLiveView({ username }: { username: string }) {
         snapshot ? (
           <InvestigationView snapshot={snapshot} />
         ) : (
-          <div className="rounded-xl border border-border bg-card p-8 animate-rise">
+          <div className="rounded-xl border border-border bg-card p-8 animate-rise" role="status" aria-live="polite">
             <p className="font-mono text-xs text-muted-foreground animate-pulse">
               Starting investigation...
             </p>
@@ -762,7 +770,7 @@ export default function ScoreLiveView({ username }: { username: string }) {
             <div className="flex items-center gap-4">
               <Image
                 src={`https://github.com/${username}.png`}
-                alt=""
+                alt={`${username}'s avatar`}
                 width={56}
                 height={56}
                 className="h-14 w-14 rounded-full bg-muted"
@@ -854,7 +862,7 @@ export default function ScoreLiveView({ username }: { username: string }) {
             {data.top_signals.map((signal) => (
               <div
                 key={signal}
-                className={`rounded-xl border border-border border-l-4 ${scoreColorClass(data.slop_score)} bg-card p-5 text-sm text-muted-foreground animate-rise animate-delay-1`}
+                className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground animate-rise animate-delay-1"
               >
                 {signal}
               </div>

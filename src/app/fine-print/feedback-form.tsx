@@ -39,10 +39,14 @@ export default function FeedbackForm() {
       onSubmit={handleSubmit}
       className="flex w-full flex-col gap-4 text-left"
     >
-      <label className="font-mono text-xs text-muted-foreground">
+      <label
+        htmlFor="feedback-message"
+        className="font-mono text-xs text-muted-foreground"
+      >
         tell us what felt off, what was spot on, or just yell into the void
       </label>
       <Textarea
+        id="feedback-message"
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         rows={5}
@@ -57,7 +61,7 @@ export default function FeedbackForm() {
             : 'Send it'}
       </Button>
       {status === 'error' ? (
-        <p className="text-xs text-primary">
+        <p role="alert" className="text-xs text-primary">
           The void rejected your message. Try again.
         </p>
       ) : null}

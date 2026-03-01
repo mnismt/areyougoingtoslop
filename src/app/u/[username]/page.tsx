@@ -41,13 +41,13 @@ export default async function UserScorePage({
   const { username } = await params
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-6 py-16">
+    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-6 py-16">
       <Link
         href="/"
-        className="font-mono text-sm text-muted-foreground hover:text-foreground"
+        className="back-link font-mono text-sm text-muted-foreground hover:text-foreground"
       >
         <span className="font-bold text-foreground">areyougoingslop</span>
-        <span className="ml-2 text-xs">&larr; back</span>
+        <span className="ml-2 text-xs"><span className="back-arrow">&larr;</span> back</span>
       </Link>
       <ScoreLiveView username={username} />
     </main>

@@ -35,9 +35,9 @@ export default function SlopGauge({ score }: { score: number }) {
         viewBox="0 0 200 120"
         className="w-56"
         role="img"
-        aria-label="Slop Score Gauge"
+        aria-label={`Slop score gauge showing ${score} out of 100`}
       >
-        <title>Slop Gauge</title>
+        <title>Slop score: {score} out of 100</title>
         <defs>
           <linearGradient id="arc-gradient" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="var(--slop-green)" />

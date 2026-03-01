@@ -28,21 +28,30 @@ export default function UsernameForm() {
       onSubmit={handleSubmit}
       className="flex w-full flex-col gap-2 text-left"
     >
-      <label className="font-mono text-xs text-muted-foreground">
+      <label
+        htmlFor="username-input"
+        className="font-mono text-xs text-muted-foreground"
+      >
         suspect
       </label>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="relative flex flex-col gap-3 sm:flex-row">
         <Input
+          id="username-input"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           placeholder="e.g. your coworker"
           className="h-12 flex-1 rounded-xl"
+          autoComplete="off"
         />
         <Button type="submit" className="h-12 rounded-xl px-6">
           Inspect the vibes
         </Button>
       </div>
-      {error ? <p className="text-sm text-primary">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-sm text-primary">
+          {error}
+        </p>
+      ) : null}
     </form>
   )
 }

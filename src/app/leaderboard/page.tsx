@@ -25,17 +25,22 @@ const scoreColor = (score: number) => {
   return 'score-high'
 }
 
+const rankDisplay = (index: number) => {
+  if (index < 3) return 'text-foreground'
+  return 'text-muted-foreground'
+}
+
 export default async function LeaderboardPage() {
   const leaderboard = await getLeaderboard({ limit: 50 })
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-16">
+    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-16">
       <header className="flex flex-col gap-4">
         <Link
           href="/"
-          className="font-mono text-xs text-muted-foreground hover:text-foreground"
+          className="back-link font-mono text-xs text-muted-foreground hover:text-foreground"
         >
-          &larr; back
+          <span className="back-arrow">&larr;</span> back
         </Link>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Wall of Shame
@@ -62,15 +67,15 @@ export default async function LeaderboardPage() {
               <div
                 key={entry.username}
                 style={{ animationDelay: `${index * 40}ms` }}
-                className="group flex flex-col gap-4 rounded-lg border border-border bg-background p-4 text-sm md:flex-row md:items-center md:justify-between animate-rise transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
+                className="card-lift group flex flex-col gap-4 rounded-lg border border-border bg-card p-4 text-sm md:flex-row md:items-center md:justify-between animate-rise"
               >
                 <div className="flex items-center gap-4">
-                  <span className="text-lg font-bold text-foreground w-8">
+                  <span className={`text-lg font-bold w-8 ${rankDisplay(index)}`}>
                     #{index + 1}
                   </span>
                   <Image
                     src={`https://github.com/${entry.username}.png`}
-                    alt=""
+                    alt={`${entry.username}'s avatar`}
                     width={36}
                     height={36}
                     className="h-9 w-9 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105"

@@ -3,7 +3,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 
 export function SiteFooter() {
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
+    <footer className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground" role="contentinfo">
       <span>
         satirical heuristic &middot; built for screenshots, not courtrooms.
       </span>

@@ -22,11 +22,11 @@ export default async function Home() {
   const leaderboard = await getLeaderboard({ limit: 6 })
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-16 px-6 py-16">
+    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-16 px-6 py-16">
       <section className="flex flex-col items-center gap-6 text-center animate-rise">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           Are you going{' '}
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-rose-400 animate-pulse">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-rose-400 to-primary animate-gradient-text">
             slop
           </span>
           ?
@@ -55,18 +55,19 @@ export default async function Home() {
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {leaderboard.entries.map((entry) => (
+            {leaderboard.entries.map((entry, i) => (
               <Link
                 key={entry.username}
                 href={`/u/${entry.username}`}
-                className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
+                style={{ animationDelay: `${120 + i * 60}ms` }}
+                className="card-lift group flex items-center gap-3 rounded-xl border border-border bg-card p-4 animate-rise"
               >
                 <Image
                   src={`https://github.com/${entry.username}.png`}
-                  alt=""
+                  alt={`${entry.username}'s avatar`}
                   width={40}
                   height={40}
-                  className="h-10 w-10 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105"
+                  className="h-10 w-10 rounded-full bg-muted transition-transform duration-300 group-hover:scale-110"
                   unoptimized
                 />
                 <div className="flex flex-1 flex-col gap-0.5">
@@ -76,7 +77,7 @@ export default async function Home() {
                   </span>
                 </div>
                 <span
-                  className={`font-mono text-lg font-bold ${scoreColor(entry.slop_score)}`}
+                  className={`font-mono text-lg font-bold transition-transform duration-300 group-hover:scale-110 ${scoreColor(entry.slop_score)}`}
                 >
                   {entry.slop_score}
                 </span>
@@ -86,20 +87,22 @@ export default async function Home() {
         </section>
       )}
 
-      <section className="flex flex-col gap-4 animate-rise animate-delay-1">
+      <section className="flex flex-col gap-4 animate-rise animate-delay-2">
         <h2 className="font-mono text-xs text-muted-foreground">
           what we sniff for
         </h2>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {signals.map((signal) => (
-            <li
+        <div className="grid gap-2 sm:grid-cols-2">
+          {signals.map((signal, i) => (
+            <div
               key={signal}
-              className="font-mono text-xs text-muted-foreground"
+              style={{ animationDelay: `${200 + i * 50}ms` }}
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/50 px-3 py-2 font-mono text-xs text-muted-foreground animate-rise"
             >
-              &bull; {signal}
-            </li>
+              <span className="text-primary">▸</span>
+              {signal}
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
       <SiteFooter />
