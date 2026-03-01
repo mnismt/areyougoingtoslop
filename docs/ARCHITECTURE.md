@@ -252,7 +252,7 @@ In-memory sliding-window limiter per client IP.
 
 ## 5. Leaderboard (`src/server/leaderboard/`)
 
-JSON file storage at `.data/leaderboard.json`.
+Redis-backed storage at key `ays:leaderboard:v1:state`.
 
 | Parameter | Value |
 |-----------|-------|
@@ -261,7 +261,9 @@ JSON file storage at `.data/leaderboard.json`.
 | Default query limit | 50 |
 | Confidence floor | `medium` (filters out `low` confidence) |
 | Sort | Score desc → most recent → username alpha |
-| Concurrency | Write lock (promise chain) |
+| Concurrency | Optimistic concurrency control (WATCH/MULTI/EXEC) |
+
+**Storage model:** The entire leaderboard is stored as a single JSON blob in Redis. Updates use optimistic locking: the key is WATCHed, the state is read, updated, and saved via MULTI/EXEC. If a concurrent update occurs, the transaction fails and retries automatically (up to 10 attempts with exponential backoff).
 
 ---
 

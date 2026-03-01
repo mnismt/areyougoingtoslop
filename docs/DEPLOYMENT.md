@@ -2,9 +2,8 @@
 
 ## Environment
 - `GITHUB_TOKEN` set for GitHub API calls.
-- `REDIS_URL` set for centralized GitHub request queue.
+- `REDIS_URL` set for centralized GitHub request queue and leaderboard storage.
 - `NEXT_PUBLIC_SITE_URL` set to production origin.
-- `LEADERBOARD_STORAGE_PATH` set to persistent storage path.
 
 Optional:
 - `FEEDBACK_STORAGE_PATH` for feedback persistence.
@@ -25,8 +24,7 @@ Optional:
 ## Launch
 - Deploy on a Node-compatible runtime (Next.js App Router).
 - Keep at least one long-lived Node process (`next start`) so embedded queue workers stay active.
-- Confirm leaderboard persists between restarts.
-- Confirm Redis is reachable and queue keys are created under `ays:gh:req:*`.
+- Confirm Redis is reachable and keys are created under `ays:gh:req:*` (queue) and `ays:leaderboard:v1:state` (leaderboard).
 - Monitor logs for `score_request` timing and p95.
 - Monitor queue health: retry spikes, reclaim activity, and sustained backlog.
 
