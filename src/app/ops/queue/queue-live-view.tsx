@@ -99,7 +99,7 @@ export default function QueueLiveView() {
       if (inFlightRef.current) return
       inFlightRef.current = true
       try {
-        const res = await fetch('/api/queue/github', { cache: 'no-store' })
+        const res = await fetch('/ops/queue/snapshot', { cache: 'no-store' })
         const payload = (await res.json().catch(() => null)) as unknown
         if (!res.ok || !isQueueSnapshot(payload)) {
           setNetworkError('snapshot unavailable. probably fine. retrying...')
