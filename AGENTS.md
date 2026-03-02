@@ -1,4 +1,4 @@
-# AGENTS.md — areyougoingslop
+# AGENTS.md — areyougoingtoslop
 
 A humorous heuristic app that scores how AI-assisted a GitHub user's public contributions appear.
 

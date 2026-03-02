@@ -1,10 +1,10 @@
-# areyougoingslop — Product Requirements Document
+# areyougoingtoslop — Product Requirements Document
 
 ## Status
 Draft v0.3 (MVP scoped)
 
 ## 1) Product Overview
-**areyougoingslop** is a viral web app that estimates how AI-assisted a GitHub user’s **public** contributions are and presents a humorous **Slop Score (0–100)** with tiered roast copy.
+**areyougoingtoslop** is a viral web app that estimates how AI-assisted a GitHub user’s **public** contributions are and presents a humorous **Slop Score (0–100)** with tiered roast copy.
 
 Positioning: **playful + directionally credible**, not forensic proof.
 

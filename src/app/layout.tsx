@@ -15,21 +15,21 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'areyougoingslop',
+  title: 'areyougoingtoslop',
   description:
     'how much of your github profile is ai slop? paste a username and find out.',
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   ),
   openGraph: {
-    title: 'areyougoingslop',
+    title: 'areyougoingtoslop',
     description:
       'how much of your github profile is ai slop? paste a username and find out.',
     images: ['/api/og/default.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'areyougoingslop',
+    title: 'areyougoingtoslop',
     description:
       'how much of your github profile is ai slop? paste a username and find out.',
     images: ['/api/og/default.png'],

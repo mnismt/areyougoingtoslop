@@ -298,7 +298,7 @@ const renderResultCard = (model: OgResultViewModel) => {
             letterSpacing: '-0.02em',
           }}
         >
-          areyougoingslop
+          areyougoingtoslop
         </p>
       </div>
 
@@ -572,7 +572,7 @@ const renderFallbackCard = (model: OgFallbackViewModel) => {
             letterSpacing: '-0.02em',
           }}
         >
-          areyougoingslop
+          areyougoingtoslop
         </p>
         <p
           style={{

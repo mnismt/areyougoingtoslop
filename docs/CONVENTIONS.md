@@ -1,6 +1,6 @@
 # Conventions & Engineering Reference
 
-Detailed engineering conventions for the areyougoingslop project. For the concise agent guide, see `AGENTS.md` at the repo root.
+Detailed engineering conventions for the areyougoingtoslop project. For the concise agent guide, see `AGENTS.md` at the repo root.
 
 ## Package Manager
 

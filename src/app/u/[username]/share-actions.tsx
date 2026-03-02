@@ -31,7 +31,7 @@ const shareButtonClass =
 export default function ShareActions({ username }: ShareActionsProps) {
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle')
 
-  const url = `https://areyougoingslop.com/u/${username}`
+  const url = `https://areyougoingtoslop.com/u/${username}`
   const shareText = `we checked @${username}'s github commits for signs of ai slop. the results are in.`
 
   const handleCopy = async () => {

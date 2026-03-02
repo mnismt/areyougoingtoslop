@@ -64,7 +64,7 @@ Example use cases:
 - Headlines carry weight through size and tracking, not color.
 - The word "slop" gets a slow gradient shift (`bg-clip-text`) — the single allowed flourish on the homepage.
 - Links use expanding bottom-border underlines (`group-hover:w-full`), never color-only hover states.
-- **All text lowercase** (see section 1) — even headlines read as "are you going slop?"
+- **All text lowercase** (see section 1) — even headlines read as "are you going to slop?"
 
 ### 7. Purposeful Animation
 - **Entrance**: `.animate-rise` — 12px translateY, 0.5s, custom bezier. Clean fade-in without blur or scale.

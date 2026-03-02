@@ -1,4 +1,4 @@
-# Testing — areyougoingslop
+# Testing — areyougoingtoslop
 
 How we test the project, what we test, and how to write new tests.
 

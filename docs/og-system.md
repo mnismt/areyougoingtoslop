@@ -6,7 +6,7 @@ Dynamic social preview generation for user score results.
 
 ## Overview
 
-The OG system generates shareable 1200×630 PNG images that render when areyougoingslop links are shared on social platforms. Two endpoints serve different purposes:
+The OG system generates shareable 1200×630 PNG images that render when areyougoingtoslop links are shared on social platforms. Two endpoints serve different purposes:
 
 | Route | Purpose |
 |-------|---------|

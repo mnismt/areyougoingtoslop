@@ -1,4 +1,4 @@
-# 360-Degree Security Audit — areyougoingslop
+# 360-Degree Security Audit — areyougoingtoslop
 
 **Date:** 2026-03-02
 **Conducted by:** Senior DevSecOps Engineering Team
@@ -347,11 +347,11 @@ The `loadGoogleFont()` function makes two sequential outbound HTTP calls to `fon
 ### M11. Hardcoded canonical domain in share actions
 **Severity:** Medium | `src/app/u/[username]/share-actions.tsx:34`
 
-`https://areyougoingslop.com` is hardcoded rather than derived from `NEXT_PUBLIC_SITE_URL`. On staging or preview deployments, shared links point to production.
+`https://areyougoingtoslop.com` is hardcoded rather than derived from `NEXT_PUBLIC_SITE_URL`. On staging or preview deployments, shared links point to production.
 
 **Remediation:**
 ```typescript
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://areyougoingslop.com'
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://areyougoingtoslop.com'
 ```
 
 ---

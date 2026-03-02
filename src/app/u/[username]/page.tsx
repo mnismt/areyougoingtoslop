@@ -12,7 +12,7 @@ export const generateMetadata = async ({
   const requestHeaders = await headers()
   const host = requestHeaders.get('host') ?? 'localhost:3000'
   const protocol = host.includes('localhost') ? 'http' : 'https'
-  const title = `@${username} | areyougoingslop`
+  const title = `@${username} | areyougoingtoslop`
   const description = `we checked @${username}'s github commits for signs of ai slop. the results are in.`
   const image = {
     url: `/api/og/${username}.png`,
@@ -55,7 +55,7 @@ export default async function UserScorePage({
         href="/"
         className="back-link font-mono text-sm text-muted-foreground hover:text-foreground"
       >
-        <span className="font-bold text-foreground">areyougoingslop</span>
+        <span className="font-bold text-foreground">areyougoingtoslop</span>
         <span className="ml-2 text-xs">
           <span className="back-arrow">&larr;</span> back
         </span>

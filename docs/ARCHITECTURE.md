@@ -1,4 +1,4 @@
-# Architecture — areyougoingslop
+# Architecture — areyougoingtoslop
 
 How the server-side logic works, end to end.
 

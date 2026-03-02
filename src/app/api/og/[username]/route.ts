@@ -59,7 +59,7 @@ export const GET = async (_request: Request, { params }: Params) => {
   })
 
   const fonts = await overrides.loadOgFonts(
-    `areyougoingslop@${username}${resolved.viewModel.variant}`,
+    `areyougoingtoslop@${username}${resolved.viewModel.variant}`,
   )
   const image = new ImageResponse(renderOgCard(resolved.viewModel), {
     width: OG_IMAGE_WIDTH,
