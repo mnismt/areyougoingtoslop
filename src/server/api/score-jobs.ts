@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { getCachedScore, setCachedScore } from '../cache'
+import { prerenderOgImage } from '../og/prerender'
 import {
   GitHubNotFoundError,
   GitHubOrganizationError,
@@ -281,6 +282,15 @@ const runScoreJob = async (jobId: string) => {
 
     const now = new Date()
     setCachedScore(job.username, result.result, now, DEFAULT_CACHE_TTL_MS)
+
+    void prerenderOgImage(
+      job.username,
+      result.result,
+      result.coverage,
+      result.limits,
+    ).catch((err) =>
+      console.warn('og_prerender_failed', { username: job.username, err }),
+    )
 
     await upsertLeaderboardEntry({
       username: job.username,

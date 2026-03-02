@@ -51,4 +51,19 @@ describe('renderOgCard', () => {
     assert.ok(html.includes('@missing-user'))
     assert.ok(html.includes('that username doesn&#x27;t exist.'))
   })
+
+  it('renders homepage preview content for fallback without username', () => {
+    const html = renderToStaticMarkup(
+      renderOgCard({
+        variant: 'unavailable',
+        title: 'playful slop score',
+        subtitle: 'we scan public github activity and deliver a fun roast.',
+      }),
+    )
+
+    assert.ok(html.includes('are you going to'))
+    assert.ok(html.includes('inspect the vibes'))
+    assert.ok(html.includes('hall of shame'))
+    assert.ok(html.includes('@Rich-Harris'))
+  })
 })

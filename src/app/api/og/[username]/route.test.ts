@@ -9,10 +9,20 @@ describe('dynamic og route', () => {
       __aysOgRouteOverrides?: {
         resolveOgData?: (username: string) => Promise<unknown>
         loadOgFonts?: () => Promise<unknown[]>
+        getCachedOgImage?: (username: string) => ArrayBuffer | null
+        setCachedOgImage?: (
+          username: string,
+          png: ArrayBuffer,
+          ttlMs: number,
+        ) => void
       }
     }
 
+    // Simulate a cache hit so we skip rendering (no real fonts available in test)
+    const fakePng = new Uint8Array([137, 80, 78, 71]).buffer
     runtime.__aysOgRouteOverrides = {
+      getCachedOgImage: () => fakePng,
+      setCachedOgImage: () => undefined,
       resolveOgData: async () => ({
         source: 'cache',
         viewModel: {
@@ -58,10 +68,18 @@ describe('dynamic og route', () => {
       __aysOgRouteOverrides?: {
         resolveOgData?: (username: string) => Promise<unknown>
         loadOgFonts?: () => Promise<unknown[]>
+        getCachedOgImage?: (username: string) => ArrayBuffer | null
+        setCachedOgImage?: (
+          username: string,
+          png: ArrayBuffer,
+          ttlMs: number,
+        ) => void
       }
     }
 
     runtime.__aysOgRouteOverrides = {
+      getCachedOgImage: () => null,
+      setCachedOgImage: () => undefined,
       resolveOgData: async () => ({
         source: 'fallback',
         viewModel: {

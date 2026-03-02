@@ -43,6 +43,7 @@ export type OgCardViewModel = OgResultViewModel | OgFallbackViewModel
 const COLORS = {
   bg: '#09090b',
   bgSecondary: '#111113',
+  card: '#121217',
   text: '#e5e5e5',
   muted: '#71717a',
   border: 'rgba(255,255,255,0.10)',
@@ -57,6 +58,39 @@ const COLORS = {
   highBadgeBg: 'rgba(251,113,133,0.16)',
   highBadgeText: '#fb7185',
 } as const
+
+const HOMEPAGE_PREVIEW_ENTRIES = [
+  {
+    username: 'Rich-Harris',
+    tier: 'the context window regular',
+    slopScore: 52,
+  },
+  {
+    username: 't3dotgg',
+    tier: 'the context window regular',
+    slopScore: 45,
+  },
+  {
+    username: 'sindresorhus',
+    tier: 'the prompt-curious',
+    slopScore: 37,
+  },
+  {
+    username: 'rauchg',
+    tier: 'the prompt-curious',
+    slopScore: 36,
+  },
+  {
+    username: 'gaearon',
+    tier: 'the prompt-curious',
+    slopScore: 34,
+  },
+  {
+    username: 'karpathy',
+    tier: 'the tab-key athlete',
+    slopScore: 22,
+  },
+] as const
 
 const scoreColor = (score: number) => {
   if (score <= 30) return COLORS.green
@@ -146,6 +180,7 @@ const renderGauge = (score: number) => {
   const ticks = [0, 25, 50, 75, 100].map((val) => {
     const a = Math.PI - (val / 100) * Math.PI
     return {
+      value: val,
       outerX: CENTER_X + RADIUS * Math.cos(a),
       outerY: CENTER_Y - RADIUS * Math.sin(a),
       innerX: CENTER_X + (RADIUS - 10) * Math.cos(a),
@@ -163,6 +198,7 @@ const renderGauge = (score: number) => {
       }}
     >
       <svg width={300} height={180} viewBox="0 0 300 180">
+        <title>slop score gauge</title>
         {/* Background arc */}
         <path
           d="M 30 135 A 120 120 0 1 1 270 135"
@@ -182,9 +218,9 @@ const renderGauge = (score: number) => {
           strokeDashoffset={arcLength * (1 - score / 100)}
         />
         {/* Tick marks */}
-        {ticks.map((tick, i) => (
+        {ticks.map((tick) => (
           <line
-            key={i}
+            key={`tick-${tick.value}`}
             x1={tick.outerX}
             y1={tick.outerY}
             x2={tick.innerX}
@@ -536,9 +572,269 @@ const renderResultCard = (model: OgResultViewModel) => {
   )
 }
 
+const renderHomepagePreviewCard = () => {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        width: '100%',
+        height: '100%',
+        padding: '32px',
+        background:
+          'radial-gradient(circle at 80% 10%, rgba(251,113,133,0.12), transparent 42%), linear-gradient(180deg, #07070a 0%, #09090b 100%)',
+        color: COLORS.text,
+        boxSizing: 'border-box',
+        flexDirection: 'column',
+        fontFamily: '"Inter", "Helvetica Neue", "Arial", sans-serif',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          width: '100%',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          areyougoingtoslop
+        </p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13,
+            color: COLORS.muted,
+            fontFamily: '"JetBrains Mono", "Menlo", monospace',
+          }}
+        >
+          satire, not a factual detector
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          flex: 1,
+          borderRadius: '22px',
+          border: `1px solid ${COLORS.softBorder}`,
+          background:
+            'linear-gradient(160deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+          padding: '28px 30px 24px',
+          flexDirection: 'column',
+          gap: '16px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 72,
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
+              lineHeight: 1,
+            }}
+          >
+            are you going to <span style={{ color: COLORS.rose }}>slop</span>?
+          </p>
+          <p
+            style={{
+              margin: 0,
+              maxWidth: '760px',
+              textAlign: 'center',
+              color: COLORS.muted,
+              fontSize: 37,
+              lineHeight: 1.2,
+            }}
+          >
+            paste a github username. we&apos;ll judge their commits so you
+            don&apos;t have to.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            width: '100%',
+            maxWidth: '860px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: COLORS.muted,
+              fontSize: 15,
+              fontFamily: '"JetBrains Mono", "Menlo", monospace',
+            }}
+          >
+            suspect
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              borderRadius: '20px',
+              border: `1px solid ${COLORS.softBorder}`,
+              overflow: 'hidden',
+              background: 'rgba(255,255,255,0.02)',
+              padding: '6px',
+              gap: '8px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flex: 1,
+                alignItems: 'center',
+                color: COLORS.muted,
+                fontSize: 31,
+                padding: '0 18px',
+              }}
+            >
+              e.g. your coworker
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '14px',
+                background: COLORS.rose,
+                color: '#1a0b10',
+                fontWeight: 600,
+                fontSize: 33,
+                padding: '14px 26px',
+                minWidth: '280px',
+              }}
+            >
+              inspect the vibes
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            width: '100%',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '2px',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 15,
+              color: COLORS.muted,
+              fontFamily: '"JetBrains Mono", "Menlo", monospace',
+            }}
+          >
+            hall of shame
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 15,
+              color: COLORS.rose,
+              fontFamily: '"JetBrains Mono", "Menlo", monospace',
+            }}
+          >
+            full wall of shame -&gt;
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          {HOMEPAGE_PREVIEW_ENTRIES.map((entry) => (
+            <div
+              key={entry.username}
+              style={{
+                display: 'flex',
+                width: '362px',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: '16px',
+                border: `1px solid ${COLORS.softBorder}`,
+                background: COLORS.card,
+                padding: '12px 16px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 31,
+                    fontWeight: 600,
+                    lineHeight: 1,
+                  }}
+                >
+                  @{entry.username}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 23,
+                    color: COLORS.muted,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {entry.tier}
+                </p>
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  color: scoreColor(entry.slopScore),
+                  fontSize: 42,
+                  fontWeight: 700,
+                  fontFamily: '"JetBrains Mono", "Menlo", monospace',
+                }}
+              >
+                {entry.slopScore}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const renderFallbackCard = (model: OgFallbackViewModel) => {
   const username = model.username?.trim() ?? ''
   const hasUser = username.length > 0
+
+  if (!hasUser) {
+    return renderHomepagePreviewCard()
+  }
 
   return (
     <div

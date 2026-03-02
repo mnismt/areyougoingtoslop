@@ -1,12 +1,19 @@
 import { ImageResponse } from 'next/og'
+import {
+  getCachedOgImage,
+  setCachedOgImage,
+} from '../../../../server/cache/og-image-cache'
 import { renderOgCard } from '../og-card'
 import { type ResolveOgDataResult, resolveOgData } from '../og-data'
 import { loadOgFonts } from '../og-fonts'
 import {
   createOgImageResponse,
+  OG_IMAGE_CACHE_CONTROL,
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
 } from '../og-response'
+
+const OG_IMAGE_TTL_MS = 12 * 60 * 60 * 1000
 
 type Params = {
   params: Promise<{ username: string }>
@@ -15,6 +22,8 @@ type Params = {
 type OgRouteOverrides = {
   resolveOgData?: typeof resolveOgData
   loadOgFonts?: typeof loadOgFonts
+  getCachedOgImage?: typeof getCachedOgImage
+  setCachedOgImage?: typeof setCachedOgImage
 }
 
 const getRouteOverrides = (): Required<OgRouteOverrides> => {
@@ -26,6 +35,10 @@ const getRouteOverrides = (): Required<OgRouteOverrides> => {
     resolveOgData:
       runtime.__aysOgRouteOverrides?.resolveOgData ?? resolveOgData,
     loadOgFonts: runtime.__aysOgRouteOverrides?.loadOgFonts ?? loadOgFonts,
+    getCachedOgImage:
+      runtime.__aysOgRouteOverrides?.getCachedOgImage ?? getCachedOgImage,
+    setCachedOgImage:
+      runtime.__aysOgRouteOverrides?.setCachedOgImage ?? setCachedOgImage,
   }
 }
 
@@ -43,6 +56,16 @@ const toUnavailableFallback = (username: string): ResolveOgDataResult => ({
 export const GET = async (_request: Request, { params }: Params) => {
   const { username } = await params
   const overrides = getRouteOverrides()
+
+  const cachedPng = overrides.getCachedOgImage(username)
+  if (cachedPng) {
+    return new Response(cachedPng, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': OG_IMAGE_CACHE_CONTROL,
+      },
+    })
+  }
 
   let resolved: ResolveOgDataResult
   try {
@@ -66,6 +89,17 @@ export const GET = async (_request: Request, { params }: Params) => {
     height: OG_IMAGE_HEIGHT,
     fonts,
   })
+
+  if (resolved.viewModel.variant === 'result') {
+    const png = await image.arrayBuffer()
+    overrides.setCachedOgImage(username, png, OG_IMAGE_TTL_MS)
+    return new Response(png, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': OG_IMAGE_CACHE_CONTROL,
+      },
+    })
+  }
 
   return createOgImageResponse(image)
 }

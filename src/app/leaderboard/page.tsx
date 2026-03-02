@@ -1,9 +1,15 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { SiteFooter } from '@/app/components/site-footer'
 import { getLeaderboard } from '../../server/leaderboard'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'wall of shame',
+  description: 'the most AI-assisted github profiles, ranked by their commitment to outsourcing.',
+}
 
 const formatDate = (value: string | null) => {
   if (!value) {

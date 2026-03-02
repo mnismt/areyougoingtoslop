@@ -35,10 +35,8 @@ it's satire. it's directionally credible. it's not a lie detector — it's a vib
 
 ## tech stack
 
-- **Next.js 15** (app router, server components, force-dynamic where redis lives)
+- **Next.js 16** (app router, server components, force-dynamic where redis lives)
 - **Redis** — job queue + leaderboard storage
-- **BullMQ** — GitHub request queue with rate-limit awareness
-- **Vercel OG** — shareable score cards
 - **Tailwind + shadcn/ui** — monochrome luxe, no framer motion, no glows, pure css restraint
 - **bun** — because we're not animals
 
@@ -61,7 +59,6 @@ required env vars:
 ```
 REDIS_URL=redis://localhost:6379
 GITHUB_TOKEN=ghp_your_token_here        # for higher rate limits
-OPENAI_API_KEY=sk-...                   # scoring uses llm assist
 ```
 
 start redis (docker or local), then:

@@ -56,7 +56,7 @@ const toCoverageFromCache = (result: SlopScoreResult): ScoreCoverage => {
   }
 }
 
-const toResultViewModel = ({
+export const toResultViewModel = ({
   username,
   avatarDataUri,
   result,

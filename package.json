@@ -10,7 +10,8 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
     "test": "tsc -p tsconfig.test.json && node --test \".test-build/**/*.test.js\"",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "gen:icons": "bun run scripts/generate-icons.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

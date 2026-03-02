@@ -15,7 +15,10 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'areyougoingtoslop',
+  title: {
+    default: 'areyougoingtoslop',
+    template: '%s | areyougoingtoslop',
+  },
   description:
     'how much of your github profile is ai slop? paste a username and find out.',
   metadataBase: new URL(
