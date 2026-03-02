@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Github } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export function SiteFooter() {
@@ -29,6 +30,15 @@ export function SiteFooter() {
           queue ops
           <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
+        <a
+          href="https://github.com/mnismt/areyougoingtoslop"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-foreground transition-colors"
+          aria-label="source code on github"
+        >
+          <Github className="h-4 w-4" />
+        </a>
         <ThemeToggle />
       </div>
     </footer>

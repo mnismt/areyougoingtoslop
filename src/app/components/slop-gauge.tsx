@@ -165,55 +165,74 @@ export default function SlopGauge({
       <TooltipProvider delayDuration={100}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex flex-col items-center -mt-2 cursor-help">
+            <div className="flex flex-col items-center -mt-2 cursor-help group">
               <span
                 className="font-mono text-4xl font-bold"
                 style={{ color: scoreColor(clamped) }}
               >
                 {score}
               </span>
-              <span className="font-mono text-xs text-muted-foreground">
+              <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
                 slop score
+                <svg
+                  className="h-3 w-3 shrink-0 text-muted-foreground/50"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 16v-4M12 8h.01"
+                  />
+                </svg>
               </span>
             </div>
           </TooltipTrigger>
           <TooltipContent
             side="bottom"
-            className="max-w-[280px] border border-border bg-card p-3 shadow-lg"
+            className="w-[300px] border border-border bg-card p-4 shadow-lg"
             sideOffset={8}
           >
             {signalBreakdown && signalBreakdown.length > 0 ? (
               <div className="space-y-2">
-                <p className="font-mono text-[10px] text-muted-foreground">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
                   signal breakdown
                 </p>
-                {signalBreakdown
-                  .filter((s) => s.contribution > 0)
-                  .map((signal) => (
-                    <div
-                      key={signal.key}
-                      className="flex items-center justify-between gap-4"
-                    >
-                      <span className="text-[11px] text-muted-foreground">
-                        {signal.label}
-                      </span>
-                      <div className="flex items-center gap-2 font-mono text-[11px]">
-                        <span className="text-foreground">
+                <div className="space-y-1.5">
+                  {signalBreakdown
+                    .filter((s) => s.contribution > 0)
+                    .map((signal) => (
+                      <div
+                        key={signal.key}
+                        className="grid items-center gap-x-3"
+                        style={{ gridTemplateColumns: '1fr auto auto' }}
+                      >
+                        <span className="text-[11px] text-muted-foreground">
+                          {signal.label}
+                        </span>
+                        <span className="whitespace-nowrap font-mono text-[11px] text-foreground tabular-nums">
                           +{formatNumber(signal.contribution)} pts
                         </span>
-                        <span className="text-muted-foreground">
+                        <span className="w-10 whitespace-nowrap text-right font-mono text-[11px] text-muted-foreground tabular-nums">
                           ({Math.round(signal.score)}%)
                         </span>
                       </div>
-                    </div>
-                  ))}
-                <div className="mt-2 border-t border-border pt-2">
-                  <div className="flex items-center justify-between gap-4">
+                    ))}
+                </div>
+                <div className="border-t border-border pt-2">
+                  <div
+                    className="grid items-center gap-x-3"
+                    style={{ gridTemplateColumns: '1fr auto' }}
+                  >
                     <span className="text-[11px] font-medium text-foreground">
                       total
                     </span>
                     <span
-                      className="font-mono text-[11px] font-bold"
+                      className="whitespace-nowrap font-mono text-[11px] font-bold tabular-nums"
                       style={{ color: scoreColor(clamped) }}
                     >
                       {score} / 100

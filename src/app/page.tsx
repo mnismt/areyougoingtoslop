@@ -30,7 +30,7 @@ export default async function Home() {
     >
       <section className="flex flex-col items-center gap-4 text-center animate-rise sm:gap-6">
         <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-          are you going{' '}
+          are you going to{' '}
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-rose-400 to-primary animate-gradient-text">
             slop
           </span>

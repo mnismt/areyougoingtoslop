@@ -44,7 +44,17 @@ export default function FinePrintPage() {
           <p className="text-sm text-muted-foreground">
             public github api only. no login. no private repos. i store username
             + score for the leaderboard. i don&apos;t sell data. i barely have
-            data.
+            data. the code itself is open source — yes, the thing judging your
+            commits is{' '}
+            <a
+              href="https://github.com/mnismt/areyougoingtoslop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              on github
+            </a>
+            . the irony is not lost on me.
           </p>
         </div>
 
