@@ -30,7 +30,10 @@ const rankDisplay = (index: number) => {
 }
 
 export default async function LeaderboardPage() {
-  const leaderboard = await getLeaderboard({ limit: 50 })
+  const leaderboard = await getLeaderboard({
+    limit: 50,
+    confidenceFloor: 'low',
+  })
 
   return (
     <main
@@ -70,44 +73,45 @@ export default async function LeaderboardPage() {
                 key={entry.username}
                 href={`/u/${entry.username}`}
                 style={{ animationDelay: `${index * 40}ms` }}
-                className="card-lift group flex flex-col gap-4 rounded-lg border border-border bg-card p-4 text-sm md:flex-row md:items-center md:justify-between animate-rise"
+                className="card-lift group flex items-center gap-4 rounded-lg border border-border bg-card p-4 animate-rise"
               >
-                <div className="flex items-center gap-4">
-                  <span
-                    className={`text-lg font-bold w-8 ${rankDisplay(index)}`}
-                  >
-                    #{index + 1}
-                  </span>
-                  <Image
-                    src={`https://github.com/${entry.username}.png`}
-                    alt={`${entry.username}'s avatar`}
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105"
-                    unoptimized
-                  />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-foreground">
+                <span
+                  className={`text-lg font-bold w-8 shrink-0 ${rankDisplay(index)}`}
+                >
+                  #{index + 1}
+                </span>
+                <Image
+                  src={`https://github.com/${entry.username}.png`}
+                  alt={`${entry.username}'s avatar`}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105 shrink-0"
+                  unoptimized
+                />
+
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="font-medium text-foreground truncate">
                       @{entry.username}
                     </span>
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="font-mono text-[10px] text-muted-foreground truncate">
                       {entry.tier}
                     </span>
                   </div>
-                </div>
-                <div className="grid grid-cols-[3rem_5rem_7rem] items-center gap-4 font-mono text-xs md:ml-auto">
-                  <span
-                    className={`text-lg font-bold text-right ${scoreColor(entry.slop_score)}`}
-                  >
-                    {entry.slop_score}
-                  </span>
-                  <span className="text-muted-foreground text-center">
-                    {entry.confidence}
-                  </span>
-                  <span className="text-muted-foreground text-right">
-                    {formatDate(entry.last_scored_at)}
+                  <span className="font-mono text-[11px] text-muted-foreground truncate">
+                    {entry.tier_tagline}
                   </span>
                 </div>
+
+                <span
+                  className={`font-mono text-2xl font-bold shrink-0 ${scoreColor(entry.slop_score)}`}
+                >
+                  {entry.slop_score}
+                </span>
+
+                <span className="font-mono text-xs text-muted-foreground shrink-0 w-24 text-right hidden sm:block">
+                  {formatDate(entry.last_scored_at)}
+                </span>
               </Link>
             ))}
           </div>

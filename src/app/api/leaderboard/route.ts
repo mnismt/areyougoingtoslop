@@ -8,7 +8,7 @@ export const GET = async (request: Request) => {
     ? Math.min(Math.max(limitParam, 1), 100)
     : undefined
 
-  const leaderboard = await getLeaderboard({ limit })
+  const leaderboard = await getLeaderboard({ limit, confidenceFloor: 'low' })
   return NextResponse.json({
     ...leaderboard,
     generated_at: new Date().toISOString(),

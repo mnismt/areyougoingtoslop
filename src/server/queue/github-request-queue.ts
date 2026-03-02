@@ -238,12 +238,12 @@ const MAX_INFLIGHT = parseBoundedIntegerEnv(
   1000,
 )
 const INFLIGHT_KEY = 'ays:gh:req:inflight'
-const TOKEN_KEY_PREFIX = 'ays:gh:req:token:'
 const LEADER_LOCK_KEY = 'ays:gh:req:leader'
 const LEADER_LOCK_TTL_MS = 10_000
 const LEADER_RENEW_MS = 4_000
 const LEADER_CHECK_INTERVAL_MS = 15_000
 const INSTANCE_ID = randomUUID()
+const inProcessTokens = new Map<string, { token: string; expiresAt: number }>()
 
 export const GITHUB_QUEUE_STREAM_KEY = STREAM_KEY
 export const GITHUB_QUEUE_GROUP_NAME = GROUP_NAME
@@ -657,12 +657,11 @@ const processQueueMessage = async (
   state.metrics.worker_processed += 1
 
   let token: string | undefined = request.token
-  const storedToken = await commandRedis.get(
-    `${TOKEN_KEY_PREFIX}${request.request_id}`,
-  )
-  if (storedToken) {
-    token = storedToken
+  const stored = inProcessTokens.get(request.request_id)
+  if (stored && stored.expiresAt > Date.now()) {
+    token = stored.token
   }
+  inProcessTokens.delete(request.request_id)
 
   try {
     const data = await executeQueueRequest(request, token)
@@ -1113,12 +1112,10 @@ const enqueueAndWait = async <K extends GitHubQueueRequestKind>(
     }
 
     if (options.token) {
-      await commandRedis.set(
-        `${TOKEN_KEY_PREFIX}${request.request_id}`,
-        options.token,
-        'PX',
-        REQUEST_TIMEOUT_MS + 5000,
-      )
+      inProcessTokens.set(request.request_id, {
+        token: options.token,
+        expiresAt: Date.now() + REQUEST_TIMEOUT_MS + 5000,
+      })
     }
 
     await commandRedis.xadd(

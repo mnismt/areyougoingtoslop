@@ -26,6 +26,12 @@ type ScoreResponse = {
   tier_tagline: string
   confidence: 'low' | 'medium' | 'high'
   top_signals: string[]
+  signal_breakdown?: Array<{
+    key: string
+    label: string
+    score: number
+    contribution: number
+  }>
   scoring_window: string
   analyzed_commits: AnalyzedCommit[]
 }
@@ -883,7 +889,10 @@ export default function ScoreLiveView({ username }: { username: string }) {
             </div>
 
             <div className="flex flex-col items-center gap-4 sm:gap-6 md:flex-row">
-              <SlopGauge score={data.slop_score} />
+              <SlopGauge
+                score={data.slop_score}
+                signalBreakdown={data.signal_breakdown}
+              />
               <div className="flex flex-1 flex-col gap-4">
                 <div className="flex flex-wrap gap-2">
                   <Badge

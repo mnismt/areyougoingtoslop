@@ -71,6 +71,12 @@ export type SlopScoreResult = {
   tier_tagline: string
   confidence: 'low' | 'medium' | 'high'
   top_signals: string[]
+  signal_breakdown?: Array<{
+    key: string
+    label: string
+    score: number
+    contribution: number
+  }>
   scoring_window: string
   analyzed_commits: AnalyzedCommit[]
 }
@@ -121,29 +127,16 @@ const getRecencyWeight = (
   return 0
 }
 
-const computeWeightedRatio = (
-  matches: Array<{ weight: number }>,
+const computeEvidenceScore = (
+  flaggedWeightSum: number,
   totalWeight: number,
-) => {
-  if (totalWeight === 0) {
-    return 0
-  }
-  const matchWeight = matches.reduce((sum, match) => sum + match.weight, 0)
-  return (matchWeight / totalWeight) * 100
-}
-
-const computeWeightedStrength = (
-  matches: Array<{ weight: number; strength: number }>,
-  totalWeight: number,
-) => {
-  if (totalWeight === 0) {
-    return 0
-  }
-  const weightedStrength = matches.reduce(
-    (sum, match) => sum + match.weight * match.strength,
-    0,
-  )
-  return (weightedStrength / totalWeight) * 100
+  eventCount: number,
+  referenceCount: number,
+): number => {
+  if (totalWeight === 0 || eventCount === 0 || referenceCount === 0) return 0
+  const avgWeight = totalWeight / eventCount
+  const referenceWeight = avgWeight * referenceCount
+  return clamp((flaggedWeightSum / referenceWeight) * 100)
 }
 
 const INIT_COMMIT_MESSAGES = new Set([
@@ -178,9 +171,6 @@ const genericMessage = (message: string) => {
     'refactor',
   ].includes(trimmed)
 }
-
-const getDayKey = (occurredAt: string) =>
-  new Date(occurredAt).toISOString().slice(0, 10)
 
 const computeConfidence = (
   eventCount: number,
@@ -229,24 +219,21 @@ export const computeSlopScore = (
     ),
   )
 
-  const aiKeywordScore = computeWeightedStrength(aiKeywordMatches, totalWeight)
-  const promptCrumbScore = computeWeightedRatio(promptCrumbMatches, totalWeight)
-
-  const nonMergeStatsEvents = statsEvents.filter((item) => !item.event.isMerge)
-
-  const dailyChanges = new Map<string, number>()
-  nonMergeStatsEvents.forEach((item) => {
-    const changes = (item.event.additions ?? 0) + (item.event.deletions ?? 0)
-    if (changes === 0) {
-      return
-    }
-    const key = getDayKey(item.event.occurredAt)
-    const current = dailyChanges.get(key) ?? 0
-    dailyChanges.set(key, current + changes * item.weight)
-  })
-  const maxDailyChanges = Math.max(0, ...dailyChanges.values())
-  const velocityScore = clamp(
-    ((maxDailyChanges - config.thresholds.velocitySpike) / 1400) * 100,
+  const aiKeywordFlaggedWeight = aiKeywordMatches.reduce(
+    (sum, m) => sum + m.weight * m.strength,
+    0,
+  )
+  const aiKeywordScore = computeEvidenceScore(
+    aiKeywordFlaggedWeight,
+    totalWeight,
+    weightedEvents.length,
+    config.thresholds.referenceFlags,
+  )
+  const promptCrumbScore = computeEvidenceScore(
+    promptCrumbMatches.reduce((sum, m) => sum + m.weight, 0),
+    totalWeight,
+    weightedEvents.length,
+    config.thresholds.referenceFlags,
   )
 
   const largeGenericMatches = statsEvents.filter((item) => {
@@ -256,13 +243,11 @@ export const computeSlopScore = (
       genericMessage(item.event.message)
     )
   })
-  const totalLargeEligible = statsEvents.filter((item) => {
-    const changes = (item.event.additions ?? 0) + (item.event.deletions ?? 0)
-    return changes >= config.thresholds.largeChange
-  })
-  const apathyScore = computeWeightedRatio(
-    largeGenericMatches,
-    totalLargeEligible.reduce((sum, item) => sum + item.weight, 0),
+  const apathyScore = computeEvidenceScore(
+    largeGenericMatches.reduce((sum, m) => sum + m.weight, 0),
+    totalWeight,
+    weightedEvents.length,
+    config.thresholds.referenceFlags,
   )
 
   const churnMatches = statsEvents.filter((item) => {
@@ -274,9 +259,11 @@ export const computeSlopScore = (
       deletions >= config.thresholds.churnDeletions
     )
   })
-  const churnScore = computeWeightedRatio(
-    churnMatches,
-    statsEvents.reduce((sum, item) => sum + item.weight, 0),
+  const churnScore = computeEvidenceScore(
+    churnMatches.reduce((sum, m) => sum + m.weight, 0),
+    totalWeight,
+    weightedEvents.length,
+    config.thresholds.referenceFlags,
   )
 
   const signalResults: SignalResult[] = [
@@ -293,13 +280,6 @@ export const computeSlopScore = (
       score: promptCrumbScore,
       weight: config.weights.prompt_crumbs,
       contribution: promptCrumbScore * config.weights.prompt_crumbs,
-    },
-    {
-      key: 'velocity_volume',
-      label: 'suspicious velocity spikes',
-      score: velocityScore,
-      weight: config.weights.velocity_volume,
-      contribution: velocityScore * config.weights.velocity_volume,
     },
     {
       key: 'apathy_ratio',
@@ -366,6 +346,14 @@ export const computeSlopScore = (
     tier_tagline: tierInfo.tagline,
     confidence,
     top_signals: topSignals,
+    signal_breakdown: [...signalResults]
+      .sort((a, b) => b.contribution - a.contribution)
+      .map((signal) => ({
+        key: signal.key,
+        label: signal.label,
+        score: signal.score,
+        contribution: signal.contribution,
+      })),
     scoring_window: 'last 180 days',
     analyzed_commits: analyzedCommits,
   }

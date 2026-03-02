@@ -19,10 +19,13 @@ const signals = [
 ]
 
 export default async function Home() {
-  const leaderboard = await getLeaderboard({ limit: 6 })
+  const leaderboard = await getLeaderboard({ limit: 6, confidenceFloor: 'low' })
 
   return (
-    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:gap-16 sm:px-6 sm:py-16">
+    <main
+      id="main-content"
+      className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:gap-16 sm:px-6 sm:py-16"
+    >
       <section className="flex flex-col items-center gap-4 text-center animate-rise sm:gap-6">
         <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
           are you going{' '}

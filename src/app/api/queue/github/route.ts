@@ -4,7 +4,12 @@ import { getGitHubQueueSnapshot } from '../../../../server/queue/github-queue-ob
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export const GET = async () => {
+export const GET = async (request: Request) => {
+  const opsToken = process.env.OPS_TOKEN
+  if (!opsToken || request.headers.get('authorization') !== `Bearer ${opsToken}`) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
   const snapshot = await getGitHubQueueSnapshot()
   return NextResponse.json(snapshot, {
     headers: {

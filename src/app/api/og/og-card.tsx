@@ -131,6 +131,136 @@ const renderAvatar = ({
   )
 }
 
+const renderGauge = (score: number) => {
+  const RADIUS = 120
+  const CENTER_X = 150
+  const CENTER_Y = 135
+  const arcLength = Math.PI * RADIUS
+
+  const angle = Math.PI - (score / 100) * Math.PI
+  const nx = CENTER_X + 105 * Math.cos(angle)
+  const ny = CENTER_Y - 105 * Math.sin(angle)
+
+  const color = scoreColor(score)
+
+  const ticks = [0, 25, 50, 75, 100].map((val) => {
+    const a = Math.PI - (val / 100) * Math.PI
+    return {
+      outerX: CENTER_X + RADIUS * Math.cos(a),
+      outerY: CENTER_Y - RADIUS * Math.sin(a),
+      innerX: CENTER_X + (RADIUS - 10) * Math.cos(a),
+      innerY: CENTER_Y - (RADIUS - 10) * Math.sin(a),
+    }
+  })
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '4px',
+      }}
+    >
+      <svg width={300} height={180} viewBox="0 0 300 180">
+        {/* Background arc */}
+        <path
+          d="M 30 135 A 120 120 0 1 1 270 135"
+          fill="none"
+          stroke="rgba(255,255,255,0.10)"
+          strokeWidth={16}
+          strokeLinecap="round"
+        />
+        {/* Colored arc */}
+        <path
+          d="M 30 135 A 120 120 0 1 1 270 135"
+          fill="none"
+          stroke={color}
+          strokeWidth={16}
+          strokeLinecap="round"
+          strokeDasharray={arcLength}
+          strokeDashoffset={arcLength * (1 - score / 100)}
+        />
+        {/* Tick marks */}
+        {ticks.map((tick, i) => (
+          <line
+            key={i}
+            x1={tick.outerX}
+            y1={tick.outerY}
+            x2={tick.innerX}
+            y2={tick.innerY}
+            stroke="rgba(255,255,255,0.20)"
+            strokeWidth={2}
+          />
+        ))}
+        {/* Needle */}
+        <line
+          x1={CENTER_X}
+          y1={CENTER_Y}
+          x2={nx}
+          y2={ny}
+          stroke={color}
+          strokeWidth={3}
+          strokeLinecap="round"
+        />
+        {/* Center dot */}
+        <circle cx={CENTER_X} cy={CENTER_Y} r={5} fill={color} />
+      </svg>
+      {/* Arc labels — outside SVG because Satori doesn't support <text> nodes */}
+      <div
+        style={{
+          display: 'flex',
+          width: '300px',
+          justifyContent: 'space-between',
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: 10,
+            color: COLORS.muted,
+            fontFamily: '"JetBrains Mono", "Menlo", monospace',
+          }}
+        >
+          artisan
+        </p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 10,
+            color: COLORS.muted,
+            fontFamily: '"JetBrains Mono", "Menlo", monospace',
+          }}
+        >
+          slop machine
+        </p>
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 72,
+          fontWeight: 700,
+          color,
+          fontFamily: '"JetBrains Mono", "Menlo", monospace',
+          lineHeight: 1,
+        }}
+      >
+        {score}
+      </p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          color: COLORS.muted,
+          fontFamily: '"JetBrains Mono", "Menlo", monospace',
+        }}
+      >
+        slop score
+      </p>
+    </div>
+  )
+}
+
 const renderResultCard = (model: OgResultViewModel) => {
   const badge = confidenceColor(model.confidence)
   const score = Math.max(0, Math.min(100, model.slopScore))
@@ -150,6 +280,7 @@ const renderResultCard = (model: OgResultViewModel) => {
         fontFamily: '"Inter", "Helvetica Neue", "Arial", sans-serif',
       }}
     >
+      {/* Header */}
       <div
         style={{
           display: 'flex',
@@ -169,266 +300,236 @@ const renderResultCard = (model: OgResultViewModel) => {
         >
           areyougoingslop
         </p>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 14,
-            color: COLORS.muted,
-            fontFamily: '"JetBrains Mono", "Menlo", monospace',
-          }}
-        >
-          entertainment purposes only
-        </p>
       </div>
 
+      {/* Card */}
       <div
         style={{
           display: 'flex',
-          flexDirection: 'column',
+          flex: 1,
           borderRadius: '22px',
           border: `1px solid ${COLORS.softBorder}`,
           background:
             'linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
-          padding: '28px',
-          gap: '18px',
+          padding: '32px',
+          flexDirection: 'row',
+          gap: '32px',
         }}
       >
+        {/* Left column */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '18px',
+            flex: 1,
+            flexDirection: 'column',
+            justifyContent: 'space-between',
           }}
         >
-          {renderAvatar({
-            username: model.username,
-            avatarDataUri: model.avatarDataUri,
-          })}
+          {/* Avatar + username/tier/tagline */}
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: '5px',
+              alignItems: 'center',
+              gap: '18px',
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                fontSize: 44,
-                fontWeight: 700,
-                letterSpacing: '-0.03em',
-                lineHeight: 1,
-              }}
-            >
-              @{model.username}
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 24,
-                color: COLORS.text,
-                lineHeight: 1.1,
-              }}
-            >
-              {model.tier}
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 15,
-                color: COLORS.muted,
-                lineHeight: 1.2,
-              }}
-            >
-              {model.tierTagline}
-            </p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              minWidth: '180px',
-              borderRadius: '16px',
-              border: `1px solid ${COLORS.border}`,
-              padding: '12px 16px',
-              flexDirection: 'column',
-              background: 'rgba(0,0,0,0.25)',
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                color: COLORS.muted,
-                fontSize: 12,
-                fontFamily: '"JetBrains Mono", "Menlo", monospace',
-              }}
-            >
-              slop score
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 58,
-                lineHeight: 1,
-                fontWeight: 700,
-                letterSpacing: '-0.04em',
-                color: scoreColor(score),
-                fontFamily: '"JetBrains Mono", "Menlo", monospace',
-              }}
-            >
-              {score}
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}
-          >
+            {renderAvatar({
+              username: model.username,
+              avatarDataUri: model.avatarDataUri,
+            })}
             <div
               style={{
                 display: 'flex',
-                gap: '8px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  borderRadius: '999px',
-                  padding: '6px 12px',
-                  background: badge.bg,
-                  color: badge.text,
-                  fontSize: 14,
-                  fontFamily: '"JetBrains Mono", "Menlo", monospace',
-                }}
-              >
-                {model.confidence} confidence
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  borderRadius: '999px',
-                  padding: '6px 12px',
-                  border: `1px solid ${COLORS.softBorder}`,
-                  color: COLORS.muted,
-                  fontSize: 14,
-                  fontFamily: '"JetBrains Mono", "Menlo", monospace',
-                }}
-              >
-                {model.scoringWindow}
-              </div>
-            </div>
-            {model.statusLine ? (
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: COLORS.muted,
-                }}
-              >
-                {model.statusLine}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            borderRadius: '14px',
-            border: `1px solid ${COLORS.softBorder}`,
-            overflow: 'hidden',
-          }}
-        >
-          {[
-            {
-              label: 'commits inspected',
-              value: model.stats.commitsInspected,
-            },
-            {
-              label: 'repos raided',
-              value: model.stats.reposRaided,
-            },
-            {
-              label: 'crime window',
-              value: `${model.stats.windowDays}d`,
-            },
-            {
-              label: 'intel sources',
-              value: model.stats.intelSources,
-            },
-          ].map((stat, index) => (
-            <div
-              key={stat.label}
-              style={{
-                display: 'flex',
-                flex: 1,
                 flexDirection: 'column',
-                padding: '12px 14px',
-                borderLeft:
-                  index === 0 ? 'none' : `1px solid ${COLORS.softBorder}`,
-                alignItems: 'center',
-                gap: '2px',
+                gap: '5px',
               }}
             >
               <p
                 style={{
                   margin: 0,
-                  fontSize: 26,
+                  fontSize: 44,
                   fontWeight: 700,
-                  fontFamily: '"JetBrains Mono", "Menlo", monospace',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1,
                 }}
               >
-                {stat.value}
+                @{model.username}
               </p>
               <p
                 style={{
                   margin: 0,
-                  color: COLORS.muted,
-                  fontSize: 11,
-                  fontFamily: '"JetBrains Mono", "Menlo", monospace',
+                  fontSize: 24,
+                  color: COLORS.text,
+                  lineHeight: 1.1,
                 }}
               >
-                {stat.label}
+                {model.tier}
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 15,
+                  color: COLORS.muted,
+                  lineHeight: 1.2,
+                }}
+              >
+                {model.tierTagline}
               </p>
             </div>
-          ))}
+          </div>
+
+          {/* Stats strip */}
+          <div
+            style={{
+              display: 'flex',
+              borderRadius: '14px',
+              border: `1px solid ${COLORS.softBorder}`,
+              overflow: 'hidden',
+            }}
+          >
+            {[
+              {
+                label: 'commits inspected',
+                value: model.stats.commitsInspected,
+              },
+              {
+                label: 'repos raided',
+                value: model.stats.reposRaided,
+              },
+              {
+                label: 'crime window',
+                value: `${model.stats.windowDays}d`,
+              },
+              {
+                label: 'intel sources',
+                value: model.stats.intelSources,
+              },
+            ].map((stat, index) => (
+              <div
+                key={stat.label}
+                style={{
+                  display: 'flex',
+                  flex: 1,
+                  flexDirection: 'column',
+                  padding: '16px 14px',
+                  borderLeft:
+                    index === 0 ? 'none' : `1px solid ${COLORS.softBorder}`,
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 26,
+                    fontWeight: 700,
+                    fontFamily: '"JetBrains Mono", "Menlo", monospace',
+                  }}
+                >
+                  {stat.value}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    color: COLORS.muted,
+                    fontSize: 11,
+                    fontFamily: '"JetBrains Mono", "Menlo", monospace',
+                  }}
+                >
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Signals chips */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '10px',
+              flexWrap: 'wrap',
+            }}
+          >
+            {model.topSignals.slice(0, 3).map((signal) => (
+              <div
+                key={signal}
+                style={{
+                  display: 'flex',
+                  borderRadius: '12px',
+                  border: `1px solid ${COLORS.softBorder}`,
+                  background: 'rgba(255,255,255,0.02)',
+                  padding: '9px 12px',
+                  color: COLORS.muted,
+                  fontSize: 13,
+                  maxWidth: '340px',
+                }}
+              >
+                {signal}
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* Right column */}
         <div
           style={{
             display: 'flex',
-            gap: '10px',
-            flexWrap: 'wrap',
+            width: '380px',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          {model.topSignals.slice(0, 3).map((signal) => (
+          {renderGauge(score)}
+
+          {/* Confidence + window badges */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+            }}
+          >
             <div
-              key={signal}
               style={{
                 display: 'flex',
-                borderRadius: '12px',
-                border: `1px solid ${COLORS.softBorder}`,
-                background: 'rgba(255,255,255,0.02)',
-                padding: '9px 12px',
-                color: COLORS.muted,
-                fontSize: 13,
-                maxWidth: '340px',
+                borderRadius: '999px',
+                padding: '6px 12px',
+                background: badge.bg,
+                color: badge.text,
+                fontSize: 14,
+                fontFamily: '"JetBrains Mono", "Menlo", monospace',
               }}
             >
-              {signal}
+              {model.confidence} confidence
             </div>
-          ))}
+            <div
+              style={{
+                display: 'flex',
+                borderRadius: '999px',
+                padding: '6px 12px',
+                border: `1px solid ${COLORS.softBorder}`,
+                color: COLORS.muted,
+                fontSize: 14,
+                fontFamily: '"JetBrains Mono", "Menlo", monospace',
+              }}
+            >
+              {model.scoringWindow}
+            </div>
+          </div>
+
+          {model.statusLine ? (
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                color: COLORS.muted,
+                textAlign: 'center',
+              }}
+            >
+              {model.statusLine}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

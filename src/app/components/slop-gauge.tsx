@@ -1,3 +1,10 @@
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
 const RADIUS = 80
 const STROKE = 12
 const CENTER_X = 100
@@ -25,7 +32,26 @@ const scoreColor = (score: number) => {
   return 'var(--slop-red)'
 }
 
-export default function SlopGauge({ score }: { score: number }) {
+const formatNumber = (value: number) => {
+  const rounded = Math.round(value * 10) / 10
+  if (Number.isInteger(rounded)) {
+    return rounded.toFixed(0)
+  }
+  return rounded.toFixed(1)
+}
+
+export default function SlopGauge({
+  score,
+  signalBreakdown,
+}: {
+  score: number
+  signalBreakdown?: Array<{
+    key: string
+    label: string
+    score: number
+    contribution: number
+  }>
+}) {
   const clamped = Math.max(0, Math.min(100, score))
   const arcLength = Math.PI * RADIUS
 
@@ -136,17 +162,73 @@ export default function SlopGauge({ score }: { score: number }) {
         </text>
       </svg>
 
-      <div className="flex flex-col items-center -mt-2">
-        <span
-          className="font-mono text-4xl font-bold"
-          style={{ color: scoreColor(clamped) }}
-        >
-          {score}
-        </span>
-        <span className="font-mono text-xs text-muted-foreground">
-          slop score
-        </span>
-      </div>
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex flex-col items-center -mt-2 cursor-help">
+              <span
+                className="font-mono text-4xl font-bold"
+                style={{ color: scoreColor(clamped) }}
+              >
+                {score}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                slop score
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            className="max-w-[280px] border border-border bg-card p-3 shadow-lg"
+            sideOffset={8}
+          >
+            {signalBreakdown && signalBreakdown.length > 0 ? (
+              <div className="space-y-2">
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  signal breakdown
+                </p>
+                {signalBreakdown
+                  .filter((s) => s.contribution > 0)
+                  .map((signal) => (
+                    <div
+                      key={signal.key}
+                      className="flex items-center justify-between gap-4"
+                    >
+                      <span className="text-[11px] text-muted-foreground">
+                        {signal.label}
+                      </span>
+                      <div className="flex items-center gap-2 font-mono text-[11px]">
+                        <span className="text-foreground">
+                          +{formatNumber(signal.contribution)} pts
+                        </span>
+                        <span className="text-muted-foreground">
+                          ({Math.round(signal.score)}%)
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                <div className="mt-2 border-t border-border pt-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-[11px] font-medium text-foreground">
+                      total
+                    </span>
+                    <span
+                      className="font-mono text-[11px] font-bold"
+                      style={{ color: scoreColor(clamped) }}
+                    >
+                      {score} / 100
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="font-mono text-[11px] text-muted-foreground">
+                no signal data available
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   )
 }
