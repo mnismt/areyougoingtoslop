@@ -6,6 +6,8 @@ a heuristic that estimates how AI-assisted a developer's recent public contribut
 
 it's satire. it's directionally credible. it's not a lie detector — it's a vibe detector.
 
+![homepage](./resources/readme-img-homepage.png)
+
 ---
 
 ## what it does
@@ -14,6 +16,8 @@ it's satire. it's directionally credible. it's not a lie detector — it's a vib
 2. we raid their public commit history
 3. we sniff for AI attribution hints, suspiciously large 3am diffs, commit messages shorter than your attention span, and assorted prompt crumbs
 4. we hand you a number and a tier label
+
+![score card](./resources/readme-img-card.png)
 
 ### the tiers
 
