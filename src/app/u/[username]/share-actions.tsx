@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { RedditIcon } from '@/components/icons/reddit'
 import { XIcon } from '@/components/icons/x'
 import { Button } from '@/components/ui/button'
+import { pickShareMessage } from './share-message'
 
 type ShareActionsProps = {
   username: string
@@ -32,7 +33,7 @@ export default function ShareActions({ username }: ShareActionsProps) {
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle')
 
   const url = `https://areyougoingtoslop.com/u/${username}`
-  const shareText = `we checked @${username}'s github commits for signs of ai slop. the results are in.`
+  const shareText = pickShareMessage(username)
 
   const handleCopy = async () => {
     try {

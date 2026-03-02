@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import ScoreLiveView from './score-live-view'
+import { pickShareMessage } from './share-message'
 
 export const generateMetadata = async ({
   params,
@@ -13,7 +14,7 @@ export const generateMetadata = async ({
   const host = requestHeaders.get('host') ?? 'localhost:3000'
   const protocol = host.includes('localhost') ? 'http' : 'https'
   const title = `@${username} | areyougoingtoslop`
-  const description = `we checked @${username}'s github commits for signs of ai slop. the results are in.`
+  const description = pickShareMessage(username)
   const image = {
     url: `/api/og/${username}.png`,
     width: 1200,
