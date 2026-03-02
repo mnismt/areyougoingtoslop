@@ -4,6 +4,8 @@ import { SiteFooter } from '@/app/components/site-footer'
 import { getLeaderboard } from '../server/leaderboard'
 import UsernameForm from './components/username-form'
 
+export const dynamic = 'force-dynamic'
+
 const scoreColor = (score: number) => {
   if (score <= 30) return 'score-low'
   if (score <= 70) return 'score-mid'

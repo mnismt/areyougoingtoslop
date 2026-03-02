@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { SiteFooter } from '@/app/components/site-footer'
 import { getLeaderboard } from '../../server/leaderboard'
 
+export const dynamic = 'force-dynamic'
+
 const formatDate = (value: string | null) => {
   if (!value) {
     return '\u2014'
