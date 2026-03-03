@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { SiteFooter } from '@/app/components/site-footer'
@@ -5,6 +6,22 @@ import { getLeaderboard } from '../server/leaderboard'
 import UsernameForm from './components/username-form'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  openGraph: {
+    title: 'areyougoingtoslop',
+    description:
+      'how much of your github profile is ai slop? paste a username and find out.',
+    images: ['/og.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'areyougoingtoslop',
+    description:
+      'how much of your github profile is ai slop? paste a username and find out.',
+    images: ['/og.png'],
+  },
+}
 
 const scoreColor = (score: number) => {
   if (score <= 30) return 'score-low'
