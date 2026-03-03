@@ -33,7 +33,6 @@ export default function ShareActions({ username }: ShareActionsProps) {
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle')
 
   const url = `https://areyougoingtoslop.com/u/${username}`
-  const shareText = pickShareMessage(username)
 
   const handleCopy = async () => {
     try {
@@ -62,13 +61,14 @@ export default function ShareActions({ username }: ShareActionsProps) {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            const shareText = pickShareMessage(username)
             window.open(
               `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`,
               '_blank',
               'noopener,noreferrer,width=600,height=600',
             )
-          }
+          }}
           className={shareButtonClass}
           aria-label="share on x"
         >
@@ -77,13 +77,14 @@ export default function ShareActions({ username }: ShareActionsProps) {
 
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            const shareText = pickShareMessage(username)
             window.open(
               `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(shareText)}`,
               '_blank',
               'noopener,noreferrer,width=600,height=600',
             )
-          }
+          }}
           className={shareButtonClass}
           aria-label="share on reddit"
         >

@@ -22,10 +22,6 @@ const shareMessages = [
 ]
 
 export const pickShareMessage = (username: string) => {
-  const seed = username
-    .toLowerCase()
-    .split('')
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-
-  return shareMessages[seed % shareMessages.length](username)
+  const index = Math.floor(Math.random() * shareMessages.length)
+  return shareMessages[index](username)
 }
