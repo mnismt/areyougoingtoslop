@@ -45,7 +45,7 @@ const PROMPT_CRUMBS = [
   "i can't",
 ]
 
-const MAX_ANALYZED_COMMITS = 200
+const MAX_ANALYZED_COMMITS = 500
 
 export type SignalResult = {
   key: string
