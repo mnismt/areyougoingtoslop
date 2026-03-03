@@ -17,10 +17,10 @@ export function SiteFooter() {
           <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
         <Link
-          href="/leaderboard"
+          href="/wallofshame"
           className="group relative hover:text-foreground"
         >
-          leaderboard
+          wall of shame
           <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
         <Link

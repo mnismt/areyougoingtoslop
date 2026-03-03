@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/leaderboard',
+        destination: '/wallofshame',
+        permanent: true,
+      },
+    ]
+  },
   async rewrites() {
     return [
       {

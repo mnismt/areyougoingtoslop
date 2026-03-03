@@ -69,7 +69,7 @@ export default async function Home() {
               hall of shame
             </h2>
             <Link
-              href="/leaderboard"
+              href="/wallofshame"
               className="group relative font-mono text-xs text-primary"
             >
               full wall of shame &rarr;
