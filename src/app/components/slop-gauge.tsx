@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
@@ -54,6 +57,7 @@ export default function SlopGauge({
 }) {
   const clamped = Math.max(0, Math.min(100, score))
   const arcLength = Math.PI * RADIUS
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="flex flex-col items-center">
@@ -163,9 +167,13 @@ export default function SlopGauge({
       </svg>
 
       <TooltipProvider delayDuration={100}>
-        <Tooltip>
+        <Tooltip open={open} onOpenChange={setOpen}>
           <TooltipTrigger asChild>
-            <div className="flex flex-col items-center -mt-2 cursor-help group">
+            <button
+              type="button"
+              className="flex flex-col items-center -mt-2 cursor-help group"
+              onClick={() => setOpen((prev) => !prev)}
+            >
               <span
                 className="font-mono text-4xl font-bold"
                 style={{ color: scoreColor(clamped) }}
@@ -190,7 +198,7 @@ export default function SlopGauge({
                   />
                 </svg>
               </span>
-            </div>
+            </button>
           </TooltipTrigger>
           <TooltipContent
             side="bottom"

@@ -64,7 +64,7 @@ export default async function LeaderboardPage() {
         </p>
       </header>
 
-      <section className="rounded-xl border border-border bg-card p-6">
+      <section className="rounded-xl border border-border bg-card p-3 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
           <span>top 50 offenders</span>
           <span>last updated {formatDate(leaderboard.updated_at)}</span>
@@ -81,10 +81,10 @@ export default async function LeaderboardPage() {
                 key={entry.username}
                 href={`/u/${entry.username}`}
                 style={{ animationDelay: `${index * 40}ms` }}
-                className="card-lift group flex items-center gap-4 rounded-lg border border-border bg-card p-4 animate-rise"
+                className="card-lift group flex items-center gap-2 sm:gap-4 rounded-lg border border-border bg-card p-2.5 sm:p-4 animate-rise"
               >
                 <span
-                  className={`text-lg font-bold w-8 shrink-0 ${rankDisplay(index)}`}
+                  className={`text-sm sm:text-lg font-bold w-7 sm:w-8 shrink-0 ${rankDisplay(index)}`}
                 >
                   #{index + 1}
                 </span>
@@ -93,26 +93,26 @@ export default async function LeaderboardPage() {
                   alt={`${entry.username}'s avatar`}
                   width={40}
                   height={40}
-                  className="h-10 w-10 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105 shrink-0"
+                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-muted transition-transform duration-300 group-hover:scale-105 shrink-0"
                   unoptimized
                 />
 
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="font-medium text-foreground truncate">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:gap-1">
+                  <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+                    <span className="text-sm sm:text-base font-medium text-foreground truncate">
                       @{entry.username}
                     </span>
-                    <span className="font-mono text-[10px] text-muted-foreground truncate">
+                    <span className="font-mono text-[10px] text-muted-foreground truncate hidden sm:inline">
                       {entry.tier}
                     </span>
                   </div>
-                  <span className="font-mono text-[11px] text-muted-foreground truncate">
+                  <span className="font-mono text-[10px] sm:text-[11px] text-muted-foreground truncate">
                     {entry.tier_tagline}
                   </span>
                 </div>
 
                 <span
-                  className={`font-mono text-2xl font-bold shrink-0 ${scoreColor(entry.slop_score)}`}
+                  className={`font-mono text-lg sm:text-2xl font-bold shrink-0 ${scoreColor(entry.slop_score)}`}
                 >
                   {entry.slop_score}
                 </span>
