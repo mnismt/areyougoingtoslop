@@ -162,6 +162,133 @@ describe('leaderboard store', () => {
     _testResetClient()
   })
 
+  it('increments unique counter for new users only', async () => {
+    const now = new Date('2026-02-23T00:00:00.000Z')
+    const later = new Date('2026-02-23T01:00:00.000Z')
+
+    const originalKey = 'ays:leaderboard:v1:state'
+    const counterKey = 'ays:leaderboard:v1:unique-count'
+    await redis.rename(testKey, originalKey)
+    await redis.del(counterKey)
+    _testInjectRedisClient(redis)
+
+    // First user — counter should go to 1
+    await upsertLeaderboardEntry(
+      {
+        username: 'alice',
+        slop_score: 50,
+        tier: 'the context window regular',
+        confidence: 'medium',
+        last_scored_at: now.toISOString(),
+      },
+      { now },
+    )
+    assert.equal(await redis.get(counterKey), '1')
+
+    // Second user — counter should go to 2
+    await upsertLeaderboardEntry(
+      {
+        username: 'bob',
+        slop_score: 60,
+        tier: 'the delegation economy',
+        confidence: 'medium',
+        last_scored_at: now.toISOString(),
+      },
+      { now },
+    )
+    assert.equal(await redis.get(counterKey), '2')
+
+    // Update existing user — counter should stay at 2
+    await upsertLeaderboardEntry(
+      {
+        username: 'alice',
+        slop_score: 55,
+        tier: 'the context window regular',
+        confidence: 'medium',
+        last_scored_at: later.toISOString(),
+      },
+      { now: later, minUpdateIntervalMinutes: 0 },
+    )
+    assert.equal(await redis.get(counterKey), '2')
+
+    // Clean up
+    await redis.del(originalKey)
+    await redis.del(counterKey)
+    _testResetClient()
+  })
+
+  it('getLeaderboard returns total_analyzed from unique counter', async () => {
+    const now = new Date('2026-02-23T00:00:00.000Z')
+
+    const originalKey = 'ays:leaderboard:v1:state'
+    const counterKey = 'ays:leaderboard:v1:unique-count'
+    await redis.rename(testKey, originalKey)
+    // Set counter to a value higher than entries count
+    await redis.set(counterKey, '999')
+    _testInjectRedisClient(redis)
+
+    await upsertLeaderboardEntry(
+      {
+        username: 'octocat',
+        slop_score: 72,
+        tier: 'the delegation economy',
+        confidence: 'high',
+        last_scored_at: now.toISOString(),
+      },
+      { now },
+    )
+
+    const leaderboard = await getLeaderboard({ confidenceFloor: 'low' })
+    // Should use counter (999 + 1 = 1000), not entries.length (1)
+    assert.equal(leaderboard.total_analyzed, 1000)
+
+    // Clean up
+    await redis.del(originalKey)
+    await redis.del(counterKey)
+    _testResetClient()
+  })
+
+  it('falls back to entries.length when counter key is missing', async () => {
+    const now = new Date('2026-02-23T00:00:00.000Z')
+
+    const originalKey = 'ays:leaderboard:v1:state'
+    const counterKey = 'ays:leaderboard:v1:unique-count'
+    await redis.rename(testKey, originalKey)
+    await redis.del(counterKey)
+    _testInjectRedisClient(redis)
+
+    // Seed a state with entries but no counter
+    await redis.set(
+      originalKey,
+      JSON.stringify({
+        entries: [
+          {
+            username: 'alice',
+            slop_score: 50,
+            tier: 'the context window regular',
+            confidence: 'medium',
+            last_scored_at: now.toISOString(),
+          },
+          {
+            username: 'bob',
+            slop_score: 60,
+            tier: 'the delegation economy',
+            confidence: 'medium',
+            last_scored_at: now.toISOString(),
+          },
+        ],
+      }),
+    )
+
+    const leaderboard = await getLeaderboard({ confidenceFloor: 'low' })
+    // No counter key — should fall back to entries.length
+    assert.equal(leaderboard.total_analyzed, 2)
+
+    // Clean up
+    await redis.del(originalKey)
+    _testResetClient()
+  })
+
   it('sorts entries by score desc, then date desc, then username asc', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
     const earlier = new Date('2026-02-22T00:00:00.000Z')

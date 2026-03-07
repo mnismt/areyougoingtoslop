@@ -66,7 +66,7 @@ export default async function LeaderboardPage() {
 
       <section className="rounded-xl border border-border bg-card p-3 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
-          <span>top 50 offenders</span>
+          <span>top {leaderboard.entries.length} offenders out of {leaderboard.total_analyzed} analyzed</span>
           <span>last updated {formatDate(leaderboard.updated_at)}</span>
         </div>
 

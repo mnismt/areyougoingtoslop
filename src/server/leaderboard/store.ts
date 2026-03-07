@@ -20,6 +20,7 @@ const DEFAULT_CONFIDENCE_FLOOR: LeaderboardStoreOptions['confidenceFloor'] =
   'medium'
 
 const LEADERBOARD_KEY = 'ays:leaderboard:v1:state'
+const UNIQUE_COUNT_KEY = 'ays:leaderboard:v1:unique-count'
 
 const confidenceRank: Record<
   NonNullable<LeaderboardStoreOptions['confidenceFloor']>,
@@ -172,6 +173,15 @@ export const upsertLeaderboardEntry = async (
         continue
       }
 
+      // Increment unique counter for new users (outside transaction — at-most-once is fine)
+      if (existingIndex < 0) {
+        try {
+          await redis.incr(UNIQUE_COUNT_KEY)
+        } catch {
+          // Non-critical — counter is best-effort
+        }
+      }
+
       // Success
       return updatedEntry
     } catch (err: unknown) {
@@ -207,8 +217,25 @@ export const getLeaderboard = async (options: LeaderboardStoreOptions = {}) => {
       confidenceRank[entry.confidence] >= confidenceRank[confidenceFloor],
   )
 
+  let totalAnalyzed = state.entries.length
+  const redis = getCommandClient()
+  if (redis) {
+    try {
+      const count = await redis.get(UNIQUE_COUNT_KEY)
+      if (count !== null) {
+        const parsed = parseInt(count, 10)
+        if (!Number.isNaN(parsed) && parsed > 0) {
+          totalAnalyzed = parsed
+        }
+      }
+    } catch {
+      // Fall back to state.entries.length
+    }
+  }
+
   return {
     entries: filtered.slice(0, limit),
+    total_analyzed: totalAnalyzed,
     updated_at:
       filtered[0]?.last_scored_at ?? state.entries[0]?.last_scored_at ?? null,
   }
