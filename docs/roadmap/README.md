@@ -21,6 +21,9 @@ This folder tracks implementation planning at the **epic level**.
 - [~] [Epic 10 — Launch Readiness](./epic-10-launch-readiness.md)
 - [~] [Epic 11 — Coverage-First Ingestion + Streaming UX](./epic-11-coverage-streaming.md)
 - [x] [Epic 12 — UI Vibes Polish](./epic-12-ui-polish.md)
+- [x] [Epic 13 — Dynamic OG Image Generation](./epic-13-og-images.md)
+- [~] [Epic 14 — Slop Heatmap (Contribution Calendar)](./epic-14-slop-heatmap.md)
+- [x] [Epic 15 — Lab Notes (Editorial Changelog)](./epic-15-lab-notes.md)
 
 ## Milestones
 ### Milestone A (Buildable MVP)

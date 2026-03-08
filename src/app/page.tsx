@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { SiteFooter } from '@/app/components/site-footer'
+import { getLatestVersionedLabNote } from '@/data/lab-notes'
 import { getLeaderboard } from '../server/leaderboard'
+import { LatestReleaseHint } from './components/latest-release-hint'
 import UsernameForm from './components/username-form'
 
 export const dynamic = 'force-dynamic'
@@ -39,6 +41,7 @@ const signals = [
 
 export default async function Home() {
   const leaderboard = await getLeaderboard({ limit: 6, confidenceFloor: 'low' })
+  const latestRelease = getLatestVersionedLabNote()
 
   return (
     <main
@@ -60,10 +63,13 @@ export default async function Home() {
         <div className="w-full max-w-md">
           <UsernameForm />
         </div>
+        <div className="mx-auto max-w-2xl animate-rise animate-delay-1">
+          <LatestReleaseHint entry={latestRelease} />
+        </div>
       </section>
 
       {leaderboard.entries.length > 0 && (
-        <section className="flex flex-col gap-3 animate-rise animate-delay-1 sm:gap-6">
+        <section className="flex flex-col gap-3 animate-rise animate-delay-2 sm:gap-6">
           <div className="flex items-center justify-between">
             <h2 className="font-mono text-xs text-muted-foreground">
               hall of shame
@@ -109,7 +115,7 @@ export default async function Home() {
         </section>
       )}
 
-      <section className="flex flex-col gap-4 animate-rise animate-delay-2">
+      <section className="flex flex-col gap-4 animate-rise animate-delay-3">
         <h2 className="font-mono text-xs text-muted-foreground">
           what we sniff for
         </h2>

@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import { Github } from 'lucide-react'
+import Link from 'next/link'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export function SiteFooter() {
   return (
-    <footer className="flex flex-col gap-4 font-mono text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between" role="contentinfo">
+    <footer className="flex flex-col gap-4 font-mono text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
       <span>
         satirical heuristic &middot; built for screenshots, not courtrooms.
       </span>
@@ -14,6 +14,13 @@ export function SiteFooter() {
           className="group relative hover:text-foreground"
         >
           fine print
+          <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
+        </Link>
+        <Link
+          href="/lab-notes"
+          className="group relative hover:text-foreground"
+        >
+          lab notes
           <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
         </Link>
         <Link
