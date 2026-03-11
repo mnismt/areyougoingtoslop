@@ -34,6 +34,21 @@ const slugifyLabNoteToken = (value: string) =>
 
 export const labNotes = [
   {
+    date: '2026-03-11',
+    tag: 'feature',
+    version: 'v0.0.3',
+    title: 'the slop heatmap arrived',
+    note: 'one score was too subtle. now there is a full calendar showing exactly when the prompt residue started to cluster and how comfortable it got.',
+    media: [
+      {
+        type: 'video',
+        src: '/changelogs/slop-v0.0.3.mp4',
+        width: '920px',
+        label: 'calendar of concern',
+      },
+    ],
+  },
+  {
     date: '2026-03-08',
     tag: 'feature',
     version: 'v0.0.2',

@@ -53,6 +53,9 @@
   --slop-green: #059669;
   --slop-yellow: #d97706;
   --slop-red: #e11d48;
+  --heatmap-empty: rgba(0, 0, 0, 0.04);
+  --heatmap-low: #d97706;
+  --heatmap-mid: #e87161;
   --radius: 0.75rem;
   --font-display: var(--font-inter), "Inter", system-ui, sans-serif;
   --font-mono-stack:
@@ -81,6 +84,9 @@
   --slop-green: #34d399;
   --slop-yellow: #fbbf24;
   --slop-red: #fb7185;
+  --heatmap-empty: rgba(255, 255, 255, 0.03);
+  --heatmap-low: #fbbf24;
+  --heatmap-mid: #f97066;
 }
 
 * {
@@ -149,6 +155,30 @@ body {
 
 .queue-flow-dot {
   animation: queue-flow-dot 2.6s linear infinite;
+}
+
+/* ── Heatmap cell pulse (new data arriving) ──────── */
+@keyframes cell-pulse {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  38% {
+    transform: scale(1.14);
+    filter: brightness(1.18);
+  }
+  72% {
+    transform: scale(0.985);
+    filter: brightness(1.05);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.heatmap-cell-pulse {
+  animation: cell-pulse 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* ── Delays ───────────────────────────────────────── */

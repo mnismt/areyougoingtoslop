@@ -8,6 +8,7 @@ import SlopGauge from '@/app/components/slop-gauge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import CommitList from './commit-list'
+import SlopHeatmap from './slop-heatmap'
 import ShareActions from './share-actions'
 
 export type AnalyzedCommit = {
@@ -964,6 +965,13 @@ export default function ScoreLiveView({ username }: { username: string }) {
               ))}
             </section>
           ) : null}
+
+          {data.analyzed_commits.length > 0 && (
+            <SlopHeatmap
+              commits={data.analyzed_commits}
+              windowDays={snapshot?.coverage.window_days ?? 180}
+            />
+          )}
 
           <section className="grid gap-2 sm:gap-4 md:grid-cols-3">
             {data.top_signals.map((signal) => (

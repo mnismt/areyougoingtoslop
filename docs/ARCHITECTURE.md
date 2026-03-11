@@ -279,6 +279,23 @@ Redis-backed storage at key `ays:leaderboard:v1:state`.
 
 ---
 
-## 6. Performance Tracking (`src/server/perf/`)
+## 6. Client-Side Visualizations
+
+### 6.1 Slop Heatmap (`src/app/u/[username]/slop-heatmap.tsx`)
+
+A GitHub-style contribution calendar rendered as an inline SVG. It receives the `analyzed_commits` array from the score result and buckets commits by day, coloring each cell by the ratio of flagged commits using the full emerald → amber → warm-red → rose spectrum.
+
+- **Input:** `AnalyzedCommit[]` + `windowDays` (from the scoring window, typically 180).
+- **Grid:** Builds a Monday-aligned week grid via `buildGrid()`, then maps each day to a `DayBucket { total, flagged }`.
+- **Color ramp:** 5-level scale — near-invisible empty, emerald (clean), amber (≤50%), warm-red (≤80%), rose (>80%). Defined in `globals.css` as `--heatmap-*` custom properties.
+- **Filtering:** Client-side time-range filter (6m/3m/1m/1w) dims out-of-range cells without re-fetching data.
+- **Insight line:** Computes slop streak, hottest month, and flagged-% to generate a snarky one-liner.
+- **Tooltip:** Rich tooltip with green/red ratio bar, flagged count, and sarcastic vibe label.
+- **Animation:** Uses `motion/react` (`motion.rect`) for declarative entrance (spring stagger per column), direction-aware filter wave (right-to-left when widening, left-to-right when narrowing), and smooth `fill` transitions on data arrival. CSS `heatmap-cell-pulse` keyframe retained for progressive-data pulse.
+- **Responsive:** Uses `ResizeObserver` to auto-size cells to fill the container.
+
+---
+
+## 7. Performance Tracking (`src/server/perf/`)
 
 Rolling buffer of last 200 score request durations. Exposes `getScoreP95()` for monitoring against the <10s target.

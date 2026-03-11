@@ -48,10 +48,11 @@ Example use cases:
 - Confidence level indicators
 - Scoring signal breakdowns
 
-### 4. Pure CSS & Tailwind Native
-- **No Framer Motion**. Keep the bundle size low and respect the standard CSS engine.
+### 4. CSS-First Animation, Motion Where It Earns It
+- Default to pure CSS transitions and Tailwind utilities.
 - Easing: `cubic-bezier(0.16, 1, 0.3, 1)` for springy, snappy transitions.
 - Animations are short (0.2–0.5s) and purposeful. Nothing loops unless it's the gauge.
+- **Exception:** `motion/react` is permitted for complex SVG orchestration (e.g. the slop heatmap) where declarative enter/update/stagger transitions would otherwise require brittle manual state tracking. Keep usage surgical — one component, not a global dependency.
 
 ### 5. Restraint Over Spectacle
 - **No glows**, no shimmer effects, no scanline overlays, no colored border glow on hover.
@@ -109,9 +110,11 @@ Uses the full emerald → amber → rose spectrum (matching the gauge), not tran
 - Computed snarky one-liner between header and grid, based on slop streak length, flagged-day %, or hottest month.
 - Examples: *"14-day slop streak. couldn't even take a break from the machine."*, *"zero flags on the board. either you're legit or you're good at hiding."*
 
-**Animation:**
-- Cells enter with a staggered scale + opacity transition (`8ms` delay per column, `cubic-bezier(0.34, 1.56, 0.64, 1)` spring).
-- Pure CSS transitions, no animation libraries.
+**Animation** (uses `motion/react`)**:**
+- **Entrance:** `motion.rect` with `initial={{ opacity: 0, scale: 0 }}` → spring stagger per column (`8ms` delay, `bounce: 0.35`).
+- **Filter wave:** Direction-aware stagger — left-to-right when narrowing (6m→3m), right-to-left when widening (3m→6m) so the wave follows where the visual change is happening.
+- **Data arrival:** `fill` transition (0.5s ease-out) for smooth color updates; CSS `heatmap-cell-pulse` keyframe retained for the progressive-data pulse.
+- **Filter dim/undim:** Opacity animates between 0.15 ↔ 1 via motion's declarative `animate` prop.
 
 **Interactions:**
 - Cells with commits show a rich tooltip on hover (shadcn Tooltip) with date, green/red ratio bar, `flagged/total` count, and sarcastic vibe label (*"nothing worth subpoenaing"* / *"light prompt residue"* / *"human presence not independently verified"* / *"operator appears to have left the building"*).
