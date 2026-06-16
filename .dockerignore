@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.turbo
+.beads
+.claude
+dist
+.test-build
+coverage
+*.log
+.env
+.env.*
+!.env.example
+.vscode
+.idea
