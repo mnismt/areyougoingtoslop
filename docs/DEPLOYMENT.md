@@ -8,7 +8,7 @@ the Worker entry is `worker/index.ts` (vinext `fetch` + Queue `queue()` consumer
 - `DB` — D1 database `areyougoingtoslop` (schema in `migrations/`): score jobs, leaderboard,
   counters, feedback, rate limits.
 - `CACHE` — KV namespace: `score:v1:<user>` and `og:v1:<user>` (12h TTL).
-- `SCORE_QUEUE` — Queue producer + consumer on `ays-score-jobs`
+- `SCORE_QUEUE` — Queue producer + consumer on `areyougoingtoslop-score-jobs`
   (`max_batch_size` 1, `max_concurrency` 4, `max_retries` 2).
 - `ASSETS` — static assets (required by vinext).
 
@@ -28,7 +28,7 @@ the Worker entry is `worker/index.ts` (vinext `fetch` + Queue `queue()` consumer
 ## First deploy
 1. `bunx wrangler d1 create areyougoingtoslop` → paste `database_id` into `wrangler.jsonc`.
 2. `bunx wrangler kv namespace create CACHE` → paste `id` into `wrangler.jsonc`.
-3. `bunx wrangler queues create ays-score-jobs`.
+3. `bunx wrangler queues create areyougoingtoslop-score-jobs`.
 4. `bunx wrangler secret put GITHUB_TOKEN` and `bunx wrangler secret put OPS_TOKEN`.
 5. `bun run db:migrate:remote`.
 6. Optional leaderboard import from the old Redis deployment:

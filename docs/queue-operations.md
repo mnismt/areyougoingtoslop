@@ -1,6 +1,6 @@
 # Queue Operations
 
-Score-job pipeline on Cloudflare (D1 `score_jobs` + Queue `ays-score-jobs`): verification, observability, and debugging.
+Score-job pipeline on Cloudflare (D1 `score_jobs` + Queue `areyougoingtoslop-score-jobs`): verification, observability, and debugging.
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ Important distinction:
 The dev/preview log prints one line per consumer batch:
 
 ```
-QUEUE ays-score-jobs 1/1 (5339ms)
+QUEUE areyougoingtoslop-score-jobs 1/1 (5339ms)
 ```
 
 Inspect local state (shared with the running server):

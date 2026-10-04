@@ -20,10 +20,10 @@
     { "binding": "CACHE", "id": "f7df24cc577647d885297921efcc9ba6" }
   ],
   "queues": {
-    "producers": [{ "binding": "SCORE_QUEUE", "queue": "ays-score-jobs" }],
+    "producers": [{ "binding": "SCORE_QUEUE", "queue": "areyougoingtoslop-score-jobs" }],
     "consumers": [
       {
-        "queue": "ays-score-jobs",
+        "queue": "areyougoingtoslop-score-jobs",
         "max_batch_size": 1,
         "max_batch_timeout": 0,
         "max_concurrency": 4,
