@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "areyougoingtoslop",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./worker/index.ts",
+  "assets": { "not_found_handling": "none", "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  // Placeholder IDs work locally. Replace before deploy with the output of
+  // `bunx wrangler d1 create areyougoingtoslop` and `bunx wrangler kv namespace create CACHE`,
+  // and run `bunx wrangler queues create ays-score-jobs` once.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "areyougoingtoslop",
+      "database_id": "4505be05-77a5-4a78-99e3-859a6f10cd1e",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "f7df24cc577647d885297921efcc9ba6" }
+  ],
+  "queues": {
+    "producers": [{ "binding": "SCORE_QUEUE", "queue": "ays-score-jobs" }],
+    "consumers": [
+      {
+        "queue": "ays-score-jobs",
+        "max_batch_size": 1,
+        "max_batch_timeout": 0,
+        "max_concurrency": 4,
+        "max_retries": 2
+      }
+    ]
+  }
+}

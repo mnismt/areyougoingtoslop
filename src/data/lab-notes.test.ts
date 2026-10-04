@@ -36,7 +36,7 @@ describe('labNotes media metadata', () => {
   it('returns the latest versioned note with a stable anchor id', () => {
     const latest = getLatestVersionedLabNote(labNotes)
 
-    assert.equal(latest?.version, 'v0.0.2')
-    assert.equal(latest ? getLabNoteAnchorId(latest) : null, 'note-v0-0-2')
+    assert.equal(latest?.version, 'v0.0.3')
+    assert.equal(latest ? getLabNoteAnchorId(latest) : null, 'note-v0-0-3')
   })
 })

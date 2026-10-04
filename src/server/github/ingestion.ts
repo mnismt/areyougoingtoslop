@@ -518,6 +518,11 @@ export const fetchUserActivityWithMetadata = async (
       if (error instanceof GitHubRateLimitError) {
         limits.rateLimited = true
       }
+      // Anything else (e.g. Workers' "Too many subrequests") fails the job rather than
+      // silently scoring partial data that then gets cached for 12h.
+      if (!(error instanceof GitHubError)) {
+        throw error
+      }
       return null
     }
   })

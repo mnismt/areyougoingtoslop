@@ -20,8 +20,8 @@ The OG system generates shareable 1200×630 PNG images that render when areyougo
 ```
 GET /api/og/[username]
   → resolveOgData()           // cache-first data resolution
-    → getCachedScore()        // 12h in-memory cache hit?
-    → scoreUserWithMetadata() // live compute on miss
+    → getCachedScore()        // 12h KV cache hit?
+    → createOrAttachScoreJob() // miss: enqueue (deduped) job, never score inline
     → fetchAvatarDataUri()    // github avatar → base64 (parallel)
   → loadOgFonts()             // Inter + JetBrains Mono (cached)
   → renderOgCard()            // react → @vercel/og ImageResponse
@@ -37,7 +37,7 @@ GET /api/og/[username]
 | Scenario | Behavior |
 |----------|----------|
 | Cache hit | Return cached result, avatar fetch runs in parallel |
-| Cache miss | Live score computation, write result to cache |
+| Cache miss | Enqueue a score job and serve the `unavailable` card with `Cache-Control: public, max-age=60`; the job's consumer prerenders the real card into KV when it finishes |
 | Score error | Map to fallback variant, no cache write |
 | Avatar failure | Proceed with initials fallback (no error) |
 

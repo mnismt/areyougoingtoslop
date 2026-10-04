@@ -1,53 +1,29 @@
-type CacheEntry = {
-  png: ArrayBuffer
-  expiresAt: number
-}
+import { getEnv } from '../env'
 
-const MAX_CACHE_SIZE = 500
+const getKey = (username: string) => `og:v1:${username.toLowerCase()}`
 
-const ogImageCache = new Map<string, CacheEntry>()
-
-export const getCachedOgImage = (username: string): ArrayBuffer | null => {
-  const key = username.toLowerCase()
-  const entry = ogImageCache.get(key)
-  if (!entry) {
+// KV owns expiry. Best-effort: failures degrade to a cache miss.
+export const getCachedOgImage = async (
+  username: string,
+): Promise<ArrayBuffer | null> => {
+  try {
+    return await getEnv().CACHE.get(getKey(username), 'arrayBuffer')
+  } catch (error) {
+    console.warn('og_cache_read_failed', { username, error })
     return null
   }
-  if (entry.expiresAt <= Date.now()) {
-    ogImageCache.delete(key)
-    return null
-  }
-  return entry.png
 }
 
-export const setCachedOgImage = (
+export const setCachedOgImage = async (
   username: string,
   png: ArrayBuffer,
   ttlMs: number,
-) => {
-  const key = username.toLowerCase()
-  ogImageCache.set(key, { png, expiresAt: Date.now() + ttlMs })
-
-  if (ogImageCache.size > MAX_CACHE_SIZE) {
-    const nowMs = Date.now()
-    for (const [k, entry] of ogImageCache) {
-      if (entry.expiresAt <= nowMs) {
-        ogImageCache.delete(k)
-      }
-    }
-
-    if (ogImageCache.size > MAX_CACHE_SIZE) {
-      const sorted = [...ogImageCache.entries()].sort(
-        (a, b) => a[1].expiresAt - b[1].expiresAt,
-      )
-      const toRemove = sorted.length - MAX_CACHE_SIZE
-      for (let i = 0; i < toRemove; i++) {
-        ogImageCache.delete(sorted[i][0])
-      }
-    }
+): Promise<void> => {
+  try {
+    await getEnv().CACHE.put(getKey(username), png, {
+      expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)),
+    })
+  } catch (error) {
+    console.warn('og_cache_write_failed', { username, error })
   }
-}
-
-export const clearOgImageCache = () => {
-  ogImageCache.clear()
 }

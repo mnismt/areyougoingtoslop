@@ -19,6 +19,12 @@
 
 # production
 /build
+/dist
+
+# cloudflare / wrangler local state
+.wrangler/
+.vinext/
+.dev.vars*
 
 # misc
 .DS_Store

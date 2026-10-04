@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createOrAttachScoreJob } from '../../../../../server/api/score-jobs'
-import { MemoryRateLimiter } from '../../../../../server/rate-limit'
+import { checkRateLimit } from '../../../../../server/rate-limit'
 
 type Params = {
   params: Promise<{ username: string }>
 }
-
-const jobRateLimiter = new MemoryRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  maxRequests: 10,
-})
 
 const getClientIp = (request: Request) => {
   const forwarded = request.headers.get('x-forwarded-for')
@@ -22,10 +17,16 @@ const getClientIp = (request: Request) => {
 export const POST = async (request: Request, { params }: Params) => {
   const ip = getClientIp(request)
   if (ip) {
-    const limitResult = jobRateLimiter.check(ip, Date.now())
+    const limitResult = await checkRateLimit(`score-jobs:${ip}`, {
+      windowMs: 10 * 60 * 1000,
+      maxRequests: 10,
+    })
     if (!limitResult.allowed) {
       return NextResponse.json(
-        { error: 'rate_limited', message: 'Too many score requests. Try again later.' },
+        {
+          error: 'rate_limited',
+          message: 'Too many score requests. Try again later.',
+        },
         { status: 429 },
       )
     }

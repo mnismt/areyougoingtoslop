@@ -1,83 +1,70 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
-import { after, afterEach, before, beforeEach, describe, it } from 'node:test'
-import Redis from 'ioredis'
-import {
-  _testInjectRedisClient,
-  _testResetClient,
-  getLeaderboard,
-  upsertLeaderboardEntry,
-} from './store'
+import { afterEach, beforeEach, describe, it } from 'node:test'
+import { type AppEnv, setEnv } from '../env'
+import { createFakeEnv } from '../testing/fake-env'
+import { getLeaderboard, upsertLeaderboardEntry } from './store'
 
-describe('leaderboard store', () => {
-  let redis: Redis
-  let testKey: string
+const counterValue = async (env: AppEnv) =>
+  (
+    await env.DB.prepare(
+      "SELECT value FROM counters WHERE name = 'leaderboard_unique'",
+    ).first<{ value: number }>()
+  )?.value ?? null
 
-  const TEST_REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379'
-
-  before(async () => {
-    redis = new Redis(TEST_REDIS_URL, {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: true,
-    })
-    await redis.ping() // Verify connection
+describe('leaderboard store (D1)', () => {
+  let env: AppEnv
+  beforeEach(() => {
+    env = createFakeEnv().env
+    setEnv(env)
   })
-
-  after(async () => {
-    await redis.quit()
-    _testResetClient()
-  })
-
-  beforeEach(async () => {
-    // Generate isolated test key
-    testKey = `ays:leaderboard:test:${randomUUID()}`
-    // Inject the test key into the store module by monkey-patching
-    // We'll set the key directly in Redis and the store should read it
-    await redis.set(testKey, JSON.stringify({ entries: [] }))
-  })
-
-  afterEach(async () => {
-    // Clean up test key
-    await redis.del(testKey)
-  })
+  afterEach(() => setEnv(null))
 
   it('stores and retrieves entries', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
-
-    // Inject Redis client and override key
-    const originalKey = 'ays:leaderboard:v1:state'
-    await redis.rename(testKey, originalKey)
-    _testInjectRedisClient(redis)
-
-    await upsertLeaderboardEntry(
+    const stored = await upsertLeaderboardEntry(
       {
         username: 'octocat',
         slop_score: 72,
         tier: 'the delegation economy',
+        tier_tagline: 'outsourcing, but make it git.',
         confidence: 'high',
         last_scored_at: now.toISOString(),
       },
       { now },
     )
+    assert.equal(stored?.username, 'octocat')
 
     const leaderboard = await getLeaderboard({})
     assert.equal(leaderboard.entries.length, 1)
-    assert.equal(leaderboard.entries[0].username, 'octocat')
-    assert.equal(leaderboard.entries[0].slop_score, 72)
+    assert.deepEqual(leaderboard.entries[0], {
+      username: 'octocat',
+      slop_score: 72,
+      tier: 'the delegation economy',
+      tier_tagline: 'outsourcing, but make it git.',
+      confidence: 'high',
+      last_scored_at: now.toISOString(),
+    })
+    assert.equal(leaderboard.updated_at, now.toISOString())
+  })
 
-    // Clean up
-    await redis.del(originalKey)
-    _testResetClient()
+  it('omits tier_tagline when absent', async () => {
+    const now = new Date('2026-02-23T00:00:00.000Z')
+    await upsertLeaderboardEntry(
+      {
+        username: 'plain',
+        slop_score: 40,
+        tier: 'the prompt-curious',
+        confidence: 'medium',
+        last_scored_at: now.toISOString(),
+      },
+      { now },
+    )
+    const leaderboard = await getLeaderboard({})
+    assert.equal('tier_tagline' in leaderboard.entries[0], false)
   })
 
   it('filters by confidence floor', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
-
-    // Inject Redis client and override key
-    const originalKey = 'ays:leaderboard:v1:state'
-    await redis.rename(testKey, originalKey)
-    _testInjectRedisClient(redis)
-
     await upsertLeaderboardEntry(
       {
         username: 'low-signal',
@@ -88,7 +75,6 @@ describe('leaderboard store', () => {
       },
       { now },
     )
-
     await upsertLeaderboardEntry(
       {
         username: 'medium-signal',
@@ -104,19 +90,15 @@ describe('leaderboard store', () => {
     assert.equal(leaderboard.entries.length, 1)
     assert.equal(leaderboard.entries[0].username, 'medium-signal')
 
-    // Clean up
-    await redis.del(originalKey)
-    _testResetClient()
+    const all = await getLeaderboard({ confidenceFloor: 'low' })
+    assert.equal(all.entries.length, 2)
+    const high = await getLeaderboard({ confidenceFloor: 'high' })
+    assert.equal(high.entries.length, 0)
   })
 
   it('skips rapid repeat updates', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
     const later = new Date('2026-02-23T00:05:00.000Z')
-
-    // Inject Redis client and override key
-    const originalKey = 'ays:leaderboard:v1:state'
-    await redis.rename(testKey, originalKey)
-    _testInjectRedisClient(redis)
 
     await upsertLeaderboardEntry(
       {
@@ -131,7 +113,7 @@ describe('leaderboard store', () => {
 
     const skipped = await upsertLeaderboardEntry(
       {
-        username: 'repeat',
+        username: 'Repeat',
         slop_score: 60,
         tier: 'the context window regular',
         confidence: 'medium',
@@ -141,38 +123,34 @@ describe('leaderboard store', () => {
     )
 
     assert.equal(skipped, null)
-    const leaderboard = await getLeaderboard({
-      confidenceFloor: 'low',
-    })
+    const leaderboard = await getLeaderboard({ confidenceFloor: 'low' })
     assert.equal(leaderboard.entries[0].slop_score, 30)
-
-    // Clean up
-    await redis.del(originalKey)
-    _testResetClient()
   })
 
-  it('returns empty leaderboard when Redis is unavailable', async () => {
-    // Inject null client to simulate Redis unavailability
-    _testInjectRedisClient(null)
-
+  it('returns empty leaderboard when D1 is unavailable', async () => {
+    setEnv(null)
     const leaderboard = await getLeaderboard({})
-    assert.equal(leaderboard.entries.length, 0)
-    assert.equal(leaderboard.updated_at, null)
-
-    _testResetClient()
+    assert.deepEqual(leaderboard, {
+      entries: [],
+      total_analyzed: 0,
+      updated_at: null,
+    })
+    assert.equal(
+      await upsertLeaderboardEntry({
+        username: 'nobody',
+        slop_score: 1,
+        tier: 't',
+        confidence: 'low',
+        last_scored_at: new Date().toISOString(),
+      }),
+      null,
+    )
   })
 
   it('increments unique counter for new users only', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
     const later = new Date('2026-02-23T01:00:00.000Z')
 
-    const originalKey = 'ays:leaderboard:v1:state'
-    const counterKey = 'ays:leaderboard:v1:unique-count'
-    await redis.rename(testKey, originalKey)
-    await redis.del(counterKey)
-    _testInjectRedisClient(redis)
-
-    // First user — counter should go to 1
     await upsertLeaderboardEntry(
       {
         username: 'alice',
@@ -183,9 +161,8 @@ describe('leaderboard store', () => {
       },
       { now },
     )
-    assert.equal(await redis.get(counterKey), '1')
+    assert.equal(await counterValue(env), 1)
 
-    // Second user — counter should go to 2
     await upsertLeaderboardEntry(
       {
         username: 'bob',
@@ -196,12 +173,11 @@ describe('leaderboard store', () => {
       },
       { now },
     )
-    assert.equal(await redis.get(counterKey), '2')
+    assert.equal(await counterValue(env), 2)
 
-    // Update existing user — counter should stay at 2
-    await upsertLeaderboardEntry(
+    const updated = await upsertLeaderboardEntry(
       {
-        username: 'alice',
+        username: 'ALICE',
         slop_score: 55,
         tier: 'the context window regular',
         confidence: 'medium',
@@ -209,23 +185,19 @@ describe('leaderboard store', () => {
       },
       { now: later, minUpdateIntervalMinutes: 0 },
     )
-    assert.equal(await redis.get(counterKey), '2')
+    assert.equal(updated?.slop_score, 55)
+    assert.equal(await counterValue(env), 2)
 
-    // Clean up
-    await redis.del(originalKey)
-    await redis.del(counterKey)
-    _testResetClient()
+    const leaderboard = await getLeaderboard({})
+    assert.equal(leaderboard.entries.length, 2)
+    assert.equal(leaderboard.total_analyzed, 2)
   })
 
   it('getLeaderboard returns total_analyzed from unique counter', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
-
-    const originalKey = 'ays:leaderboard:v1:state'
-    const counterKey = 'ays:leaderboard:v1:unique-count'
-    await redis.rename(testKey, originalKey)
-    // Set counter to a value higher than entries count
-    await redis.set(counterKey, '999')
-    _testInjectRedisClient(redis)
+    await env.DB.prepare(
+      "INSERT INTO counters (name, value) VALUES ('leaderboard_unique', 999)",
+    ).run()
 
     await upsertLeaderboardEntry(
       {
@@ -239,125 +211,61 @@ describe('leaderboard store', () => {
     )
 
     const leaderboard = await getLeaderboard({ confidenceFloor: 'low' })
-    // Should use counter (999 + 1 = 1000), not entries.length (1)
     assert.equal(leaderboard.total_analyzed, 1000)
-
-    // Clean up
-    await redis.del(originalKey)
-    await redis.del(counterKey)
-    _testResetClient()
   })
 
-  it('falls back to entries.length when counter key is missing', async () => {
-    const now = new Date('2026-02-23T00:00:00.000Z')
+  it('falls back to row count when the counter is missing', async () => {
+    const now = new Date('2026-02-23T00:00:00.000Z').toISOString()
+    for (const [name, score] of [
+      ['alice', 50],
+      ['bob', 60],
+    ] as const) {
+      await env.DB.prepare(
+        "INSERT INTO leaderboard VALUES (?, ?, ?, 'tier', NULL, 'low', ?)",
+      )
+        .bind(name, name, score, now)
+        .run()
+    }
 
-    const originalKey = 'ays:leaderboard:v1:state'
-    const counterKey = 'ays:leaderboard:v1:unique-count'
-    await redis.rename(testKey, originalKey)
-    await redis.del(counterKey)
-    _testInjectRedisClient(redis)
-
-    // Seed a state with entries but no counter
-    await redis.set(
-      originalKey,
-      JSON.stringify({
-        entries: [
-          {
-            username: 'alice',
-            slop_score: 50,
-            tier: 'the context window regular',
-            confidence: 'medium',
-            last_scored_at: now.toISOString(),
-          },
-          {
-            username: 'bob',
-            slop_score: 60,
-            tier: 'the delegation economy',
-            confidence: 'medium',
-            last_scored_at: now.toISOString(),
-          },
-        ],
-      }),
-    )
-
-    const leaderboard = await getLeaderboard({ confidenceFloor: 'low' })
-    // No counter key — should fall back to entries.length
+    const leaderboard = await getLeaderboard({ confidenceFloor: 'medium' })
+    assert.equal(leaderboard.entries.length, 0)
     assert.equal(leaderboard.total_analyzed, 2)
-
-    // Clean up
-    await redis.del(originalKey)
-    _testResetClient()
+    // No filtered entries: updated_at falls back to the top unfiltered row.
+    assert.equal(leaderboard.updated_at, now)
   })
 
   it('sorts entries by score desc, then date desc, then username asc', async () => {
     const now = new Date('2026-02-23T00:00:00.000Z')
     const earlier = new Date('2026-02-22T00:00:00.000Z')
 
-    // Inject Redis client and override key
-    const originalKey = 'ays:leaderboard:v1:state'
-    await redis.rename(testKey, originalKey)
-    _testInjectRedisClient(redis)
-
-    // Add entries with different scores and dates
-    await upsertLeaderboardEntry(
-      {
-        username: 'alice',
-        slop_score: 50,
-        tier: 'the context window regular',
-        confidence: 'medium',
-        last_scored_at: now.toISOString(),
-      },
-      { now },
-    )
-
-    await upsertLeaderboardEntry(
-      {
-        username: 'bob',
-        slop_score: 60,
-        tier: 'the delegation economy',
-        confidence: 'medium',
-        last_scored_at: now.toISOString(),
-      },
-      { now },
-    )
-
-    await upsertLeaderboardEntry(
-      {
-        username: 'charlie',
-        slop_score: 50,
-        tier: 'the context window regular',
-        confidence: 'medium',
-        last_scored_at: earlier.toISOString(),
-      },
-      { now: earlier },
-    )
-
-    await upsertLeaderboardEntry(
-      {
-        username: 'dave',
-        slop_score: 50,
-        tier: 'the context window regular',
-        confidence: 'medium',
-        last_scored_at: now.toISOString(),
-      },
-      { now },
-    )
+    for (const [username, slop_score, at] of [
+      ['alice', 50, now],
+      ['bob', 60, now],
+      ['charlie', 50, earlier],
+      ['dave', 50, now],
+    ] as const) {
+      await upsertLeaderboardEntry(
+        {
+          username,
+          slop_score,
+          tier: 'the context window regular',
+          confidence: 'medium',
+          last_scored_at: at.toISOString(),
+        },
+        { now: at },
+      )
+    }
 
     const leaderboard = await getLeaderboard({})
-    assert.equal(leaderboard.entries.length, 4)
+    assert.deepEqual(
+      leaderboard.entries.map((e) => e.username),
+      ['bob', 'alice', 'dave', 'charlie'],
+    )
 
-    // bob has highest score (60)
-    assert.equal(leaderboard.entries[0].username, 'bob')
-
-    // alice and dave have same score (50) and date, alice comes first alphabetically
-    assert.equal(leaderboard.entries[1].username, 'alice')
-    assert.equal(leaderboard.entries[2].username, 'dave')
-
-    // charlie has same score (50) but earlier date
-    assert.equal(leaderboard.entries[3].username, 'charlie')
-
-    // Clean up
-    await redis.del(originalKey)
-    _testResetClient()
+    const limited = await getLeaderboard({ limit: 2 })
+    assert.deepEqual(
+      limited.entries.map((e) => e.username),
+      ['bob', 'alice'],
+    )
   })
 })

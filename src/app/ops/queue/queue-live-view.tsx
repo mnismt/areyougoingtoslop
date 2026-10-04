@@ -138,8 +138,8 @@ export default function QueueLiveView() {
       <div className="flex flex-col gap-4 animate-pulse">
         <div className="h-8 w-64 rounded bg-muted/40" />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-muted/30" />
+          {['a', 'b', 'c', 'd'].map((key) => (
+            <div key={key} className="h-20 rounded-xl bg-muted/30" />
           ))}
         </div>
         <div className="h-20 rounded-xl bg-muted/20" />
@@ -154,7 +154,7 @@ export default function QueueLiveView() {
           <p className="font-mono text-sm text-muted-foreground">
             queue mode is disabled. set{' '}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">
-              REDIS_URL
+              queue bindings
             </code>{' '}
             to enable. or don't. the app mostly works without it.
           </p>

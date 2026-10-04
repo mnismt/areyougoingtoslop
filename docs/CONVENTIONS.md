@@ -39,7 +39,7 @@ src/
     leaderboard/*    # Leaderboard storage
     rate-limit/*     # Rate limiting
     api/*            # Server-side API utilities
-    queue/*          # Redis Stream queue for GitHub requests
+    queue/*          # /ops/queue snapshot built from D1 score_jobs
 ```
 
 ## Scoring: Recency Decay

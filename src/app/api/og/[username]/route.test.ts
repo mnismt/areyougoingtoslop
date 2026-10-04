@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { OG_IMAGE_CACHE_CONTROL } from '../og-response'
+import {
+  OG_IMAGE_CACHE_CONTROL,
+  OG_IMAGE_PENDING_CACHE_CONTROL,
+} from '../og-response'
 import { GET } from './route'
 
 describe('dynamic og route', () => {
@@ -105,6 +108,40 @@ describe('dynamic og route', () => {
         OG_IMAGE_CACHE_CONTROL,
       )
       assert.ok(response.body)
+    } finally {
+      runtime.__aysOgRouteOverrides = undefined
+    }
+  })
+
+  it('serves the pending card with a short cache lifetime', async () => {
+    const runtime = globalThis as typeof globalThis & {
+      __aysOgRouteOverrides?: Record<string, unknown>
+    }
+    runtime.__aysOgRouteOverrides = {
+      getCachedOgImage: () => null,
+      setCachedOgImage: () => assert.fail('pending card must not be cached'),
+      resolveOgData: async () => ({
+        source: 'queued',
+        viewModel: {
+          variant: 'unavailable',
+          username: 'new-user',
+          avatarDataUri: null,
+          title: 'the vibes are unclear',
+          subtitle: 'score unavailable right now. the detector needs a minute.',
+        },
+      }),
+      loadOgFonts: async () => [],
+    }
+
+    try {
+      const response = await GET(new Request('http://localhost'), {
+        params: Promise.resolve({ username: 'new-user' }),
+      })
+      assert.equal(response.status, 200)
+      assert.equal(
+        response.headers.get('cache-control'),
+        OG_IMAGE_PENDING_CACHE_CONTROL,
+      )
     } finally {
       runtime.__aysOgRouteOverrides = undefined
     }

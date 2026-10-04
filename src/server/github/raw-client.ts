@@ -25,6 +25,8 @@ type RequestConfig = {
 
 const GITHUB_API_BASE = 'https://api.github.com'
 const DEFAULT_RETRIES = 2
+// A rate limit that resets within this window is waited out instead of failing the job.
+const MAX_RATE_LIMIT_WAIT_MS = 30_000
 
 const buildQuery = (query?: Record<string, string | number | undefined>) => {
   if (!query) {
@@ -45,8 +47,7 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms)
   })
 
-const shouldRetry = (status: number) =>
-  status === 502 || status === 503 || status === 504
+const shouldRetry = (status: number) => status >= 500
 
 const parseRateLimitReset = (resetHeader: string | null) => {
   if (!resetHeader) {
@@ -70,6 +71,8 @@ const request = async <T>(
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
+    // GitHub rejects requests without one; Workers fetch, unlike Node's, sends none.
+    'User-Agent': 'areyougoingtoslop',
     ...config.headers,
   }
   if (options.token) {
@@ -77,10 +80,20 @@ const request = async <T>(
   }
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const response = await fetcher(url, {
-      method: config.method ?? 'GET',
-      headers,
-    })
+    let response: Response
+    try {
+      response = await fetcher(url, {
+        method: config.method ?? 'GET',
+        headers,
+      })
+    } catch (error) {
+      // Network error (connection reset, DNS). Same backoff as a 5xx.
+      if (attempt < retries) {
+        await sleep(250 * 2 ** attempt)
+        continue
+      }
+      throw error
+    }
 
     if (response.status === 404) {
       throw new GitHubNotFoundError()
@@ -93,24 +106,19 @@ const request = async <T>(
       )
     }
 
-    if (response.status === 403) {
-      const remaining = response.headers.get('X-RateLimit-Remaining')
-      if (remaining === '0') {
-        const resetAt = parseRateLimitReset(
-          response.headers.get('X-RateLimit-Reset'),
-        )
-        throw new GitHubRateLimitError(
-          'GitHub API rate limit exceeded',
-          resetAt,
-          response.status,
-        )
-      }
-    }
-
-    if (response.status === 429) {
+    if (
+      response.status === 429 ||
+      (response.status === 403 &&
+        response.headers.get('X-RateLimit-Remaining') === '0')
+    ) {
       const resetAt = parseRateLimitReset(
         response.headers.get('X-RateLimit-Reset'),
       )
+      const waitMs = new Date(resetAt).getTime() - Date.now()
+      if (attempt < retries && waitMs <= MAX_RATE_LIMIT_WAIT_MS) {
+        await sleep(Math.max(waitMs, 250))
+        continue
+      }
       throw new GitHubRateLimitError(
         'GitHub API rate limit exceeded',
         resetAt,
@@ -185,6 +193,25 @@ export const createRawGitHubClient = (options: GitHubRequestOptions) => ({
       },
       options,
     ),
-  getCommit: (repoFullName: string, sha: string) =>
-    request<GitHubCommit>(`/repos/${repoFullName}/commits/${sha}`, {}, options),
+  // Keep only what applyCommitStats reads: full responses carry every file's patch text
+  // (hundreds of KB each), which would pile up under the 128 MB isolate limit.
+  getCommit: async (
+    repoFullName: string,
+    sha: string,
+  ): Promise<GitHubCommit> => {
+    const commit = await request<GitHubCommit>(
+      `/repos/${repoFullName}/commits/${sha}`,
+      {},
+      options,
+    )
+    return {
+      sha: commit.sha,
+      commit: {
+        message: commit.commit.message,
+        author: { date: commit.commit.author?.date },
+      },
+      stats: commit.stats,
+      files: commit.files?.map((file) => ({ filename: file.filename })),
+    }
+  },
 })

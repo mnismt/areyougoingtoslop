@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import type { ScoreJobSnapshot } from '../../../server/api/score-jobs'
 import {
   GitHubNotFoundError,
-  GitHubOrganizationError,
   GitHubRateLimitError,
 } from '../../../server/github'
 import type { SlopScoreResult } from '../../../server/scoring'
@@ -31,18 +31,40 @@ const makeScore = (): SlopScoreResult => ({
   ],
 })
 
+const makeSnapshot = (
+  overrides: Partial<ScoreJobSnapshot> = {},
+): ScoreJobSnapshot => ({
+  job_id: 'job-1',
+  username: 'gaearon',
+  status: 'queued',
+  stage: 'queued',
+  progress_percent: 0,
+  result: null,
+  coverage: {
+    commits_discovered: 10,
+    commits_enriched: 8,
+    repos_scanned: 4,
+    repos_total: 6,
+    window_days: 180,
+    is_partial: false,
+    sources_used: ['events', 'repo_commits'],
+  },
+  limits: { rate_limited: false, events_pagination_limited: false },
+  error: null,
+  created_at: '2026-03-01T00:00:00.000Z',
+  updated_at: '2026-03-01T00:00:00.000Z',
+  ...overrides,
+})
+
 describe('resolveOgData', () => {
-  it('uses cache hit and does not call live scoring', async () => {
+  it('uses cache hit and does not create a job', async () => {
     let liveCalled = false
     const cached = makeScore()
 
     const result = await resolveOgData('gaearon', {
       now: () => new Date('2026-03-01T00:00:00.000Z'),
-      getCachedScore: () => cached,
-      setCachedScore: () => {
-        assert.fail('setCachedScore should not run on cache hit')
-      },
-      scoreUserWithMetadata: async () => {
+      getCachedScore: async () => cached,
+      createOrAttachScoreJob: async () => {
         liveCalled = true
         throw new Error('should not be called')
       },
@@ -59,44 +81,38 @@ describe('resolveOgData', () => {
     assert.equal(result.viewModel.slopScore, cached.slop_score)
   })
 
-  it('falls back to live scoring on cache miss and writes cache', async () => {
-    let liveCalled = 0
-    let setCalled = 0
-    const liveScore = makeScore()
-
+  it('enqueues a score job on cache miss instead of scoring inline', async () => {
+    const created: string[] = []
     const result = await resolveOgData('gaearon', {
-      now: () => new Date('2026-03-01T00:00:00.000Z'),
-      getCachedScore: () => null,
-      setCachedScore: (_username, _value, _now, ttlMs) => {
-        setCalled += 1
-        assert.ok(ttlMs > 0)
-      },
-      scoreUserWithMetadata: async () => {
-        liveCalled += 1
-        return {
-          result: liveScore,
-          coverage: {
-            commits_discovered: 10,
-            commits_enriched: 8,
-            repos_scanned: 4,
-            repos_total: 6,
-            window_days: 180,
-            is_partial: false,
-            sources_used: ['events', 'repos'],
-          },
-          limits: {
-            rate_limited: false,
-            events_pagination_limited: false,
-          },
-        }
+      getCachedScore: async () => null,
+      createOrAttachScoreJob: async (username) => {
+        created.push(username)
+        return { ok: true as const, snapshot: makeSnapshot() }
       },
       fetchAvatarDataUri: async () => null,
     })
 
-    assert.equal(result.source, 'live')
-    assert.equal(result.viewModel.variant, 'result')
-    assert.equal(liveCalled, 1)
-    assert.equal(setCalled, 1)
+    assert.deepEqual(created, ['gaearon'])
+    assert.equal(result.source, 'queued')
+    assert.equal(result.viewModel.variant, 'unavailable')
+  })
+
+  it('renders a result card from a completed job snapshot', async () => {
+    const result = await resolveOgData('gaearon', {
+      getCachedScore: async () => null,
+      createOrAttachScoreJob: async () => ({
+        ok: true as const,
+        snapshot: makeSnapshot({ status: 'completed', result: makeScore() }),
+      }),
+      fetchAvatarDataUri: async () => null,
+    })
+
+    assert.equal(result.source, 'cache')
+    if (result.viewModel.variant !== 'result') {
+      assert.fail('expected result variant')
+    }
+    assert.equal(result.viewModel.slopScore, 18)
+    assert.equal(result.viewModel.stats.reposRaided, 4)
   })
 
   it('maps invalid username to fallback variant', async () => {
@@ -115,8 +131,8 @@ describe('resolveOgData', () => {
 
   it('maps not found errors to not_found variant', async () => {
     const result = await resolveOgData('gaearon', {
-      getCachedScore: () => null,
-      scoreUserWithMetadata: async () => {
+      getCachedScore: async () => null,
+      createOrAttachScoreJob: async () => {
         throw new GitHubNotFoundError()
       },
       fetchAvatarDataUri: async () => null,
@@ -128,10 +144,14 @@ describe('resolveOgData', () => {
 
   it('maps organization errors to organization variant', async () => {
     const result = await resolveOgData('github', {
-      getCachedScore: () => null,
-      scoreUserWithMetadata: async () => {
-        throw new GitHubOrganizationError()
-      },
+      getCachedScore: async () => null,
+      createOrAttachScoreJob: async () => ({
+        ok: false as const,
+        error: {
+          code: 'is_organization' as const,
+          message: 'Organization accounts are not supported.',
+        },
+      }),
       fetchAvatarDataUri: async () => null,
     })
 
@@ -141,8 +161,8 @@ describe('resolveOgData', () => {
 
   it('maps rate limit errors to rate_limited variant', async () => {
     const result = await resolveOgData('gaearon', {
-      getCachedScore: () => null,
-      scoreUserWithMetadata: async () => {
+      getCachedScore: async () => null,
+      createOrAttachScoreJob: async () => {
         throw new GitHubRateLimitError(
           'rate limit',
           '2026-03-01T00:10:00.000Z',
@@ -160,7 +180,7 @@ describe('resolveOgData', () => {
     const liveScore = makeScore()
 
     const result = await resolveOgData('gaearon', {
-      getCachedScore: () => liveScore,
+      getCachedScore: async () => liveScore,
       fetchAvatarDataUri: async () => {
         throw new Error('network issue')
       },

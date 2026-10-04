@@ -35,8 +35,8 @@ it's satire. it's directionally credible. it's not a lie detector — it's a vib
 
 ## tech stack
 
-- **Next.js 16** (app router, server components, force-dynamic where redis lives)
-- **Redis** — job queue + leaderboard storage
+- **Next.js 16 app router on [vinext](https://github.com/cloudflare/vinext)** — Vite build, deployed to Cloudflare Workers
+- **Cloudflare D1 + KV + Queues** — jobs, leaderboard, feedback and rate limits in D1; score/OG caches in KV; scoring runs in a Queue consumer
 - **Tailwind + shadcn/ui** — monochrome luxe, no framer motion, no glows, pure css restraint
 - **bun** — because we're not animals
 
@@ -54,17 +54,18 @@ copy `.env.example` to `.env.local` and fill in the blanks:
 cp .env.example .env.local
 ```
 
-required env vars:
+env vars:
 
 ```
-REDIS_URL=redis://localhost:6379
 GITHUB_TOKEN=ghp_your_token_here        # for higher rate limits
+OPS_TOKEN=some-long-random-string       # guards /api/queue/github
 ```
 
-start redis (docker or local), then:
+no redis, no docker. D1, KV and the queue all run locally in miniflare:
 
 ```bash
-bun dev
+bun run db:migrate:local
+bun run dev
 ```
 
 open [http://localhost:3000](http://localhost:3000) and paste someone's github handle.
@@ -74,7 +75,7 @@ open [http://localhost:3000](http://localhost:3000) and paste someone's github h
 ## running tests
 
 ```bash
-bun test
+bun run test
 ```
 
 scorer output is deterministic. if you break it, the tests will tell you. loudly.
