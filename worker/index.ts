@@ -2,7 +2,7 @@ import handler from 'vinext/server/fetch-handler'
 import { failScoreJob, processScoreJob } from '../src/server/api/score-jobs'
 import { type AppEnv, type ScoreJobMessage, setEnv } from '../src/server/env'
 
-// Must match max_retries of the ays-score-jobs consumer in wrangler.jsonc.
+// Must match max_retries of the areyougoingtoslop-score-jobs consumer in wrangler.jsonc.
 const MAX_RETRIES = 2
 
 type QueueMessage<T> = {

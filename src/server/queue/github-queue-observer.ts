@@ -6,7 +6,7 @@ import {
 } from '../api/score-jobs'
 import { getEnv, hasEnv } from '../env'
 
-// Must match max_concurrency of the ays-score-jobs consumer in wrangler.jsonc.
+// Must match max_concurrency of the areyougoingtoslop-score-jobs consumer in wrangler.jsonc.
 export const SCORE_QUEUE_MAX_CONCURRENCY = 4
 
 export type GitHubQueueSnapshot = QueueSnapshot & {

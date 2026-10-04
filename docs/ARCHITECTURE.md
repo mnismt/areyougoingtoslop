@@ -18,7 +18,7 @@ GET /u/[username]
 Score job execution (Cloudflare Workers):
   → POST /api/score/[username]/jobs inserts a `queued` row in D1 `score_jobs`
     (partial unique index = one active job per username) and sends
-    {job_id, username} to the `ays-score-jobs` Queue. An active job, or a job
+    {job_id, username} to the `areyougoingtoslop-score-jobs` Queue. An active job, or a job
     completed in the last 30 min, is returned instead (D1 sees its own writes; KV may not)
   → worker/index.ts queue() consumer (max_concurrency 4) runs the scorer,
     persisting debounced progress snapshots to D1
@@ -66,7 +66,7 @@ Fetches the last **180 days** of a user's public activity via GitHub REST API.
 - Events pagination limit (`422`) is handled gracefully and exposed as a limitation flag
 
 ### Job pipeline reliability
-- Cloudflare Queue `ays-score-jobs`: `max_batch_size` 1, `max_concurrency` 4, `max_retries` 2.
+- Cloudflare Queue `areyougoingtoslop-score-jobs`: `max_batch_size` 1, `max_concurrency` 4, `max_retries` 2.
 - Scoring errors mark the job `failed` (no retry); only D1/infra errors make the consumer retry.
 - The consumer claims a job atomically (`UPDATE ... WHERE status = 'queued' ... RETURNING`), so a
   duplicate delivery of a live job is a no-op; a retry delivery may take over its own running row.
