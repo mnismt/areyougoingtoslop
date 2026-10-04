@@ -1,0 +1,19 @@
+{
+  "services": [
+    {
+      "name": "web",
+      "build": ".",
+      "dockerfile": "Dockerfile",
+      "ports": [
+        "3000"
+      ],
+      "restart": "unless-stopped",
+      "exposed": true,
+      "exposedPort": "3000",
+      "domain": "areyougoingtoslop.com",
+      "buildArgs": {
+        "NEXT_PUBLIC_SITE_URL": null
+      }
+    }
+  ]
+}
