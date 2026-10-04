@@ -13,12 +13,12 @@
     {
       "binding": "DB",
       "database_name": "areyougoingtoslop",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "4505be05-77a5-4a78-99e3-859a6f10cd1e",
       "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
-    { "binding": "CACHE", "id": "00000000000000000000000000000000" }
+    { "binding": "CACHE", "id": "f7df24cc577647d885297921efcc9ba6" }
   ],
   "queues": {
     "producers": [{ "binding": "SCORE_QUEUE", "queue": "ays-score-jobs" }],
