@@ -6,9 +6,8 @@
   "main": "./worker/index.ts",
   "assets": { "not_found_handling": "none", "binding": "ASSETS" },
   "observability": { "enabled": true },
-  // Placeholder IDs work locally. Replace before deploy with the output of
-  // `bunx wrangler d1 create areyougoingtoslop` and `bunx wrangler kv namespace create CACHE`,
-  // and run `bunx wrangler queues create ays-score-jobs` once.
+  "workers_dev": true,
+  "routes": [{ "pattern": "areyougoingtoslop.com", "custom_domain": true }],
   "d1_databases": [
     {
       "binding": "DB",
