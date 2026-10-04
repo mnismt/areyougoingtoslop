@@ -13,8 +13,8 @@ describe('LatestReleaseHint', () => {
     )
 
     assert.ok(html.includes('lab notes'))
-    assert.ok(html.includes('v0.0.2'))
-    assert.ok(html.includes('search got faster'))
-    assert.ok(html.includes('/lab-notes#note-v0-0-2'))
+    assert.ok(html.includes('v0.0.3'))
+    assert.ok(html.includes('the slop heatmap arrived'))
+    assert.ok(html.includes('/lab-notes#note-v0-0-3'))
   })
 })

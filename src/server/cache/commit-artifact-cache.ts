@@ -5,6 +5,7 @@ type CommitCacheEntry = {
   expiresAt: number
 }
 
+// ponytail: isolate-local best-effort cache; move to KV only if GitHub quota becomes the bottleneck (up to 500 writes/job)
 const MAX_CACHE_SIZE = 5000
 
 const commitArtifactCache = new Map<string, CommitCacheEntry>()

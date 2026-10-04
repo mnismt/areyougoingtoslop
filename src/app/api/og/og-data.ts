@@ -1,9 +1,6 @@
-import {
-  type ScoreCoverage,
-  type ScoreLimits,
-  scoreUserWithMetadata,
-} from '../../../server/api/score'
-import { getCachedScore, setCachedScore } from '../../../server/cache'
+import type { ScoreCoverage, ScoreLimits } from '../../../server/api/score'
+import { createOrAttachScoreJob } from '../../../server/api/score-jobs'
+import { getCachedScore } from '../../../server/cache'
 import {
   GitHubNotFoundError,
   GitHubOrganizationError,
@@ -14,20 +11,18 @@ import {
 import type { SlopScoreResult } from '../../../server/scoring'
 import type { OgCardViewModel } from './og-card'
 
-const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000
 const AVATAR_FETCH_TIMEOUT_MS = 1_800
 
 type ResolveOgDataDeps = {
   now?: () => Date
   getCachedScore?: typeof getCachedScore
-  setCachedScore?: typeof setCachedScore
-  scoreUserWithMetadata?: typeof scoreUserWithMetadata
+  createOrAttachScoreJob?: typeof createOrAttachScoreJob
   isValidGitHubUsername?: typeof isValidGitHubUsername
   fetchAvatarDataUri?: (username: string) => Promise<string | null>
 }
 
 export type ResolveOgDataResult = {
-  source: 'cache' | 'live' | 'fallback'
+  source: 'cache' | 'queued' | 'fallback'
   viewModel: OgCardViewModel
 }
 
@@ -219,9 +214,8 @@ export const resolveOgData = async (
   const nowFactory = deps.now ?? (() => new Date())
   const validateUsername = deps.isValidGitHubUsername ?? isValidGitHubUsername
   const getCachedScoreImpl = deps.getCachedScore ?? getCachedScore
-  const setCachedScoreImpl = deps.setCachedScore ?? setCachedScore
-  const scoreUserWithMetadataImpl =
-    deps.scoreUserWithMetadata ?? scoreUserWithMetadata
+  const createOrAttachScoreJobImpl =
+    deps.createOrAttachScoreJob ?? createOrAttachScoreJob
   const fetchAvatarDataUriImpl = deps.fetchAvatarDataUri ?? fetchAvatarDataUri
 
   const username = usernameRaw.trim()
@@ -241,7 +235,7 @@ export const resolveOgData = async (
 
   const avatarPromise = fetchAvatarDataUriImpl(username).catch(() => null)
   const now = nowFactory()
-  const cached = getCachedScoreImpl(username, now)
+  const cached = await getCachedScoreImpl(username, now)
   if (cached) {
     return {
       source: 'cache',
@@ -255,19 +249,37 @@ export const resolveOgData = async (
     }
   }
 
+  // Never score inline: a request can't hold ~560 GitHub calls. Go through the job queue
+  // (deduped, concurrency-capped); its consumer prerenders the real card when it finishes.
   try {
-    const score = await scoreUserWithMetadataImpl(username)
-    setCachedScoreImpl(username, score.result, now, DEFAULT_CACHE_TTL_MS)
-
+    const job = await createOrAttachScoreJobImpl(username)
+    if (!job.ok) {
+      return {
+        source: 'fallback',
+        viewModel: toFallbackViewModel(
+          username,
+          await avatarPromise,
+          job.error.code === 'is_organization'
+            ? new GitHubOrganizationError()
+            : new GitHubValidationError(job.error.message),
+        ),
+      }
+    }
+    if (job.snapshot.status === 'completed' && job.snapshot.result) {
+      return {
+        source: 'cache',
+        viewModel: toResultViewModel({
+          username,
+          avatarDataUri: await avatarPromise,
+          result: job.snapshot.result,
+          coverage: job.snapshot.coverage,
+          limits: job.snapshot.limits,
+        }),
+      }
+    }
     return {
-      source: 'live',
-      viewModel: toResultViewModel({
-        username,
-        avatarDataUri: await avatarPromise,
-        result: score.result,
-        coverage: score.coverage,
-        limits: score.limits,
-      }),
+      source: 'queued',
+      viewModel: toFallbackViewModel(username, await avatarPromise, null),
     }
   } catch (error) {
     return {

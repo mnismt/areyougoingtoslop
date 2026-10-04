@@ -1,21 +1,8 @@
-import { promises as fs } from 'node:fs'
-import path from 'node:path'
 import { NextResponse } from 'next/server'
-import { MemoryRateLimiter } from '../../../server/rate-limit'
+import { getEnv } from '../../../server/env'
+import { checkRateLimit } from '../../../server/rate-limit'
 
-type FeedbackEntry = {
-  message: string
-  received_at: string
-  ip?: string
-}
-
-const limiter = new MemoryRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  maxRequests: 5,
-})
-
-const getStoragePath = () =>
-  process.env.FEEDBACK_STORAGE_PATH ?? '.data/feedback.json'
+const MAX_FEEDBACK_ENTRIES = 200
 
 const getClientIp = (request: Request) => {
   const forwarded = request.headers.get('x-forwarded-for')
@@ -25,26 +12,15 @@ const getClientIp = (request: Request) => {
   return request.headers.get('x-real-ip') ?? undefined
 }
 
-const loadEntries = async (storagePath: string): Promise<FeedbackEntry[]> => {
-  try {
-    const raw = await fs.readFile(storagePath, 'utf-8')
-    const parsed = JSON.parse(raw) as FeedbackEntry[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-const saveEntries = async (storagePath: string, entries: FeedbackEntry[]) => {
-  await fs.mkdir(path.dirname(storagePath), { recursive: true })
-  await fs.writeFile(storagePath, JSON.stringify(entries, null, 2))
-}
-
 export const POST = async (request: Request) => {
   const now = new Date()
   const ip = getClientIp(request)
   if (ip) {
-    const limitResult = limiter.check(ip, now.getTime())
+    const limitResult = await checkRateLimit(
+      `feedback:${ip}`,
+      { windowMs: 10 * 60 * 1000, maxRequests: 5 },
+      now.getTime(),
+    )
     if (!limitResult.allowed) {
       return NextResponse.json(
         {
@@ -72,14 +48,20 @@ export const POST = async (request: Request) => {
     )
   }
 
-  const storagePath = getStoragePath()
-  const entries = await loadEntries(storagePath)
-  entries.push({
-    message,
-    received_at: now.toISOString(),
-    ip,
-  })
-  await saveEntries(storagePath, entries.slice(-200))
+  // Keep only the newest MAX_FEEDBACK_ENTRIES rows (they hold IPs), as the old JSON file did.
+  const db = getEnv().DB
+  await db.batch([
+    db
+      .prepare(
+        'INSERT INTO feedback (message, received_at, ip) VALUES (?, ?, ?)',
+      )
+      .bind(message, now.toISOString(), ip ?? null),
+    db
+      .prepare(
+        'DELETE FROM feedback WHERE id <= (SELECT MAX(id) FROM feedback) - ?',
+      )
+      .bind(MAX_FEEDBACK_ENTRIES),
+  ])
 
   return NextResponse.json({ ok: true }, { status: 201 })
 }

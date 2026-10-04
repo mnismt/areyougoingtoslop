@@ -7,9 +7,8 @@ How we test the project, what we test, and how to write new tests.
 ## Quick Reference
 
 ```bash
-bun test                    # Run all tests
-bun test src/server/queue   # Run tests in a directory
-bun test src/server/queue/github-request-queue.test.ts  # Run a specific file
+bun run test                # tsc -p tsconfig.test.json, then node --test over .test-build/
+bun run test 2>&1 | grep -A20 'failing tests'   # just the failures
 ```
 
 ---
@@ -18,12 +17,12 @@ bun test src/server/queue/github-request-queue.test.ts  # Run a specific file
 
 | Tool | Role |
 |------|------|
-| **bun test** | Test runner (built into bun runtime) |
+| **tsc + node --test** | Compile to CommonJS in `.test-build/`, run with Node's test runner (Node >= 22.5 for `node:sqlite`) |
 | **node:test** | Test API (`describe`, `it`) |
 | **node:assert/strict** | Assertions |
 | **biome** | Formatting & linting (applied to test files too) |
 
-We do **not** use Jest, Vitest, or any external test framework. All tests use the Node.js built-in test module, which bun supports natively.
+We do **not** use Jest, Vitest, or any external test framework. All tests use the Node.js built-in test module.
 
 ---
 
@@ -35,15 +34,11 @@ Test files live next to the source they test, using the `.test.ts` suffix:
 src/
   server/
     queue/
-      github-request-queue.ts        # Source
-      github-request-queue.test.ts   # Tests
-      github-queue-observer.ts
-      github-queue-observer.test.ts
+      github-queue-observer.ts       # Source
+      github-queue-observer.test.ts  # Tests
     api/
       score-jobs.ts
       score-jobs.test.ts
-      score-handler.ts
-      score-handler.test.ts
     scoring/
       engine.ts
       engine.test.ts
@@ -71,68 +66,22 @@ src/
 The bulk of our tests. These exercise deterministic functions with no side effects — parsing, serialization, computation, validation.
 
 **Examples:**
-- `parseQueueRequest` — JSON → typed request or null
-- `parseXReadResponse` / `parseXAutoClaimResponse` — Redis response shapes → typed messages
-- `serializeQueueError` / `restoreQueueError` — error class → wire format → error class roundtrip
-- `isRetryableError` / `computeRetryDelayMs` — retry decision logic and backoff math
-- `parseRedisInfoRows` — Redis XINFO response normalization
-- `toNonNegativeInteger` / `parseDelayedRetryTimestamp` — observer parsing helpers
 - `computeSlopScore` — scoring engine (deterministic for same input + date)
 - `mapScoreToTier` — score → tier label
 
 **Pattern:** These functions are exported from their source modules (some specifically for testing). Tests import them directly and assert on return values.
 
 ```ts
-import { parseQueueRequest } from './github-request-queue'
+import { mapScoreToTier } from './tier'
 
-it('parses valid request JSON', () => {
-  const result = parseQueueRequest(JSON.stringify({
-    request_id: 'abc',
-    kind: 'get_user',
-    payload: { username: 'octocat' },
-    attempt: 0,
-    enqueued_at: '2026-01-01T00:00:00Z',
-  }))
-  assert.equal(result?.kind, 'get_user')
+it('maps 0 to the bottom tier', () => {
+  assert.equal(mapScoreToTier(0).name, 'the untouched keyboard')
 })
 ```
 
-### 2. In-Memory State Tests (globalThis singletons)
+### 2. Stateful modules
 
-Several modules use `globalThis` singletons for state (queue worker state, score job registry). Tests manipulate these directly.
-
-**Key pattern — save and restore globalThis state:**
-
-```ts
-it('normalizes legacy worker state', () => {
-  const runtime = globalThis as typeof globalThis & {
-    __aysGhQueueState?: unknown
-  }
-  const previous = runtime.__aysGhQueueState
-
-  runtime.__aysGhQueueState = { started: true }
-
-  try {
-    const metrics = getGitHubQueueRuntimeMetrics()
-    assert.equal(metrics.started, true)
-    assert.equal(metrics.worker_starts, 0) // backfilled
-  } finally {
-    runtime.__aysGhQueueState = previous
-  }
-})
-```
-
-**Key pattern — use cleanup functions:**
-
-Score jobs expose `clearScoreJobs()` for test isolation. Always call it at the start of each test:
-
-```ts
-it('creates a job', async () => {
-  await clearScoreJobs()
-  clearScoreCache()
-  // ... test logic
-})
-```
+Durable state (jobs, leaderboard, caches, rate limits) lives behind `getEnv()`, so isolation is a fresh fake env per test (see section 4). The only process-local state left is the isolate-local commit-artifact cache.
 
 ### 3. API Route Tests (handler-level)
 
@@ -149,55 +98,48 @@ it('returns 404 for missing job', async () => {
 })
 ```
 
-### 4. Integration Tests with External Dependencies
+### 4. Tests that touch Cloudflare bindings
 
-Tests that need Redis or network access. Currently limited — the queue worker loops, leader election, and BLPOP flows are not unit-tested because they require a live Redis instance.
+Node cannot import `cloudflare:workers`, so app code reaches D1, KV and the Queue only through `getEnv()` in `src/server/env.ts`. Tests install an in-memory fake:
 
-**Convention:** When a test needs `REDIS_URL` to be unset (to test the no-Redis fallback path), temporarily override it:
+- `createFakeEnv()` (`src/server/testing/fake-env.ts`) gives `DB` as `node:sqlite` with every `migrations/*.sql` applied (tests run the real SQL), `CACHE` as a Map that mirrors KV's 60s minimum TTL, and `SCORE_QUEUE.send` pushing into `sent`.
+- Call `setEnv(createFakeEnv().env)` in `beforeEach`; call `setEnv(null)` to test the bindings-missing path.
+- GitHub calls are stubbed by replacing `globalThis.fetch`.
 
 ```ts
-it('returns disabled when no Redis', async () => {
-  const prev = process.env.REDIS_URL
-  process.env.REDIS_URL = ''
-  try {
-    const snapshot = await getGitHubQueueSnapshot()
-    assert.equal(snapshot.health, 'disabled')
-  } finally {
-    process.env.REDIS_URL = prev
-  }
+beforeEach(() => setEnv(createFakeEnv().env))
+
+it('returns disabled without bindings', async () => {
+  setEnv(null)
+  const snapshot = await getGitHubQueueSnapshot()
+  assert.equal(snapshot.health, 'disabled')
 })
 ```
+
+End-to-end behaviour under workerd (queue consumer, real D1/KV) is checked by hand with `bun run dev` / `bun run preview`; see `docs/queue-operations.md`.
 
 ---
 
 ## What We Test by Module
 
-### Queue System (`src/server/queue/`)
-
-The core infrastructure. Highest test density.
+### Queue observer (`src/server/queue/`)
 
 | Area | Tests | Approach |
 |------|-------|----------|
-| Stream message parsing | `parseQueueRequest`, `parseStreamFieldsToRequest`, `parseXReadResponse`, `parseXAutoClaimResponse` | Pure function — all Redis response shapes, malformed input, edge cases |
-| Error serialization | `serializeQueueError`, `restoreQueueError` | Roundtrip through JSON for each error class (`GitHubRateLimitError`, `GitHubNotFoundError`, `GitHubError`, plain `Error`) |
-| Retry logic | `isRetryableError`, `computeRetryDelayMs` | Decision matrix (status codes, error types) and backoff bounds (exponential growth, jitter ranges, `reset_at` handling, max cap) |
-| Metrics normalization | `getGitHubQueueRuntimeMetrics` | Legacy state migration, partial metric objects |
-| Observer parsing | `parseRedisInfoRows`, `toNonNegativeInteger`, `parseDelayedRetryTimestamp` | Redis XINFO shapes, type coercion, edge inputs |
-| Observer snapshot | `getGitHubQueueSnapshot` | Disabled state when no Redis |
-
-**Not yet tested (requires Redis):** worker loops, BLPOP response flow, leader election, backpressure (`INCR`/`DECR` inflight), delayed scheduler promotion, `XAUTOCLAIM` reclaim loop.
+| Snapshot | `getGitHubQueueSnapshot` counts, consumers, usernames | Seeded `score_jobs` rows in the fake D1 |
+| Disabled / degraded | No bindings → `disabled`; `DB.prepare` throws → `degraded` | `setEnv(null)` / throwing fake |
 
 ### Score Jobs (`src/server/api/`)
 
 | Area | Tests | Approach |
 |------|-------|----------|
-| Job creation | Valid username, invalid username, whitespace handling | In-memory, no Redis |
-| Deduplication | Same username returns existing job | Uses cached scores to get synchronous completion |
-| Job retrieval | `getScoreJob` by ID, missing ID returns null | In-memory registry |
-| Cache integration | Cached score → immediate completed snapshot | `setCachedScore` → `createOrAttachScoreJob` |
-| Snapshot shape | All fields present with correct types | Structure assertion |
-| Coverage computation | `commits_enriched` count from `additions`/`deletions` presence | Cached score with mixed commit data |
-| Cleanup | `clearScoreJobs` empties registry | Verify `getScoreJob` returns null after clear |
+| Job creation | Valid username, invalid username, whitespace handling | Fake env, stubbed `fetch` |
+| Deduplication | Second create for an active user returns the same job, one queue message | Partial unique index in D1 |
+| Job retrieval | `getScoreJob` by ID, missing ID returns null, stale running job reads as failed, queued job in a long backlog stays queued | Fake D1 |
+| Reuse | Just-completed job is returned from D1 when KV misses | Fake D1 + KV delete |
+| Cache integration | Cached score → immediate completed snapshot | `await setCachedScore` → `createOrAttachScoreJob` |
+| Consumer | `processScoreJob` no-op on missing/terminal job; happy path writes job, leaderboard row and KV score; GitHub 404 → failed `not_found`; duplicate delivery skipped, retry takes over; non-GitHub enrichment error → `server_error`, nothing cached; `failScoreJob` | Stubbed `fetch` |
+| Snapshot shape / coverage | All fields present; `commits_enriched` from `additions`/`deletions` presence | Structure assertion |
 
 ### Scoring Engine (`src/server/scoring/`)
 
@@ -211,7 +153,7 @@ The core infrastructure. Highest test density.
 
 | Area | Tests | Approach |
 |------|-------|----------|
-| Client selection | Queue vs raw based on `REDIS_URL` | Env var toggling |
+| Client | Custom fetcher is used; `User-Agent` header is sent (GitHub 403s without one, and Workers fetch adds none) | Fake fetcher |
 | Ingestion pipeline | Mock fetcher → event normalization → merge → enrich | Fake `fetch` that returns canned GitHub API responses |
 
 ---
@@ -222,7 +164,7 @@ The core infrastructure. Highest test density.
 
 1. **Co-locate** — test file sits next to source: `foo.ts` → `foo.test.ts`
 2. **Imports** — use `node:test` (`describe`, `it`) and `node:assert/strict`
-3. **Isolation** — each test cleans up its own state. Use `clearScoreJobs()`, `clearScoreCache()`, env var save/restore as needed
+3. **Isolation** — each test cleans up its own state. Use a fresh `setEnv(createFakeEnv().env)` per test, env var save/restore as needed
 4. **No mocking library** — we use manual fakes (fake `fetch`, direct globalThis manipulation). No sinon/jest mocks
 5. **Determinism** — pass explicit `now` dates to avoid time-dependent flakes. Use ranges for jitter-affected values
 6. **Format after writing** — run `bunx biome check --write <file>` on new test files
@@ -234,25 +176,11 @@ When a function is private but pure (no side effects, no I/O), export it for tes
 ```ts
 // At the bottom of the source file
 export {
-  parseQueueRequest,
-  serializeQueueError,
+  myPureHelper,
   // ...
 }
 ```
 
-This is the convention used in `github-request-queue.ts` and `github-queue-observer.ts`.
-
-### Testing with jitter / randomness
-
-`computeRetryDelayMs` includes `Math.random()` jitter. Test with bounds, not exact values:
-
-```ts
-it('attempt 0 delay is within expected range', () => {
-  const delay = computeRetryDelayMs({ name: 'Error', message: 'fail' }, 0)
-  assert.ok(delay >= 350, `delay ${delay} should be >= base`)
-  assert.ok(delay <= 750, `delay ${delay} should be <= base + jitter + margin`)
-})
-```
 
 ### Template for a new test file
 
@@ -279,15 +207,24 @@ describe('myFunction', () => {
 
 | File | Tests | Focus |
 |------|-------|-------|
-| `server/queue/github-request-queue.test.ts` | 60 | Parsing, errors, retry, roundtrip |
-| `server/queue/github-queue-observer.test.ts` | 38 | Observer parsing, snapshot |
-| `server/api/score-jobs.test.ts` | 13 | Jobs lifecycle, dedup, cache |
-| `server/api/score-handler.test.ts` | 5 | Legacy score handler |
-| `server/scoring/engine.test.ts` | 8 | Score computation |
+| `server/queue/github-queue-observer.test.ts` | 3 | D1-backed snapshot, stale rows excluded, disabled, degraded |
+| `server/api/score-jobs.test.ts` | 25 | Jobs lifecycle, dedup, cache, staleness, claim, failure marking |
+| `server/scoring/engine.test.ts` | 11 | Score computation, tiers |
 | `server/github/ingestion.test.ts` | 4 | Ingestion pipeline |
-| `server/github/client.test.ts` | 2 | Client selection |
-| `server/leaderboard/store.test.ts` | 3 | Leaderboard I/O |
-| `app/api/feedback/route.test.ts` | 2 | Feedback endpoint |
-| `app/api/queue/github/route.test.ts` | 1 | Queue status endpoint |
-| `app/api/score/jobs/[jobId]/route.test.ts` | 1 | Job polling endpoint |
-| **Total** | **137** | |
+| `server/github/client.test.ts` | 3 | Custom fetcher, User-Agent, commit trimming, retries |
+| `server/leaderboard/store.test.ts` | 9 | Leaderboard I/O |
+| `server/cache/score-cache.test.ts` | 5 | KV score cache |
+| `server/cache/og-image-cache.test.ts` | 4 | KV OG image cache |
+| `server/rate-limit/index.test.ts` | 5 | D1 rate limiter |
+| `server/testing/fake-env.test.ts` | 3 | Fake bindings |
+| `app/api/feedback/route.test.ts` | 5 | Feedback endpoint, 200-row cap |
+| `app/api/og/og-data.test.ts` | 8 | OG data resolution, queued on miss |
+| `app/api/og/og-card.test.ts` | 3 | OG card rendering |
+| `app/api/og/[username]/route.test.ts` | 3 | OG route, pending cache header |
+| `app/api/og/default/route.test.ts` | 1 | Default OG image |
+| `app/api/queue/github/route.test.ts` | 3 | Queue status endpoint |
+| `app/api/score/[username]/jobs/route.test.ts` | 4 | Job creation endpoint (202/200/400/429) |
+| `app/api/score/jobs/[jobId]/route.test.ts` | 2 | Job polling endpoint |
+| `app/ops/queue/consumer-pagination.test.ts` | 12 | Ops view pagination |
+| other (`app/`, `data/`) | 6 | Heatmap helpers, lab notes, release hint |
+| **Total (`bun run test`)** | **119** | |

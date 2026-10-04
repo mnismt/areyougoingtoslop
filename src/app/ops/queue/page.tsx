@@ -6,7 +6,7 @@ import QueueLiveView from './queue-live-view'
 export const metadata: Metadata = {
   title: 'queue ops',
   description:
-    'live queue health for the redis-backed github request pipeline. probably fine.',
+    'live queue health for the github scoring pipeline. probably fine.',
 }
 
 export default function QueueOpsPage() {

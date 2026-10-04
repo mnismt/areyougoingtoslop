@@ -15,35 +15,28 @@ GET /u/[username]
   → progressive snapshots (discovering → enriching → finalizing)
   → final score card + stats strip + signal breakdown + commits
 
-Legacy endpoint (still supported):
-GET /api/score/[username]
-  → rate-limit check (IP-based, 30 req / 10 min)
-  → cache lookup (in-memory, 12h TTL, max 1000 entries)
-  → fetchUserActivity() + computeSlopScore()
-  → upsert leaderboard
-  → cache write + return
-
-GitHub transport inside ingestion:
-  → createGitHubClient()
-  → if REDIS_URL is set and no custom fetcher is passed:
-      enqueue request to Redis Stream queue
-      embedded worker executes GitHub request
-      retries/backoff/rate-limit delay handled in queue worker
-      response returned to ingestion via Redis result key
-  → otherwise (tests/local fallback): direct GitHub HTTP call
+Score job execution (Cloudflare Workers):
+  → POST /api/score/[username]/jobs inserts a `queued` row in D1 `score_jobs`
+    (partial unique index = one active job per username) and sends
+    {job_id, username} to the `ays-score-jobs` Queue. An active job, or a job
+    completed in the last 30 min, is returned instead (D1 sees its own writes; KV may not)
+  → worker/index.ts queue() consumer (max_concurrency 4) runs the scorer,
+    persisting debounced progress snapshots to D1
+  → on success: KV score cache, D1 leaderboard upsert, KV OG prerender
+  → GitHub calls go straight through `createRawGitHubClient` (no shared queue)
 
 Queue observability:
 GET /api/queue/github
-  → read-only queue snapshot (Redis + process-local diagnostics)
+  → read-only snapshot derived from D1 `score_jobs` (queued = lag, running = pending)
   → used by /ops/queue public monitoring page
 ```
 
 Entrypoints:
-- `src/server/api/score-handler.ts` (legacy synchronous API)
-- `src/server/api/score-jobs.ts` (phase-1 async jobs + polling snapshots)
-- `src/server/queue/github-request-queue.ts` (Redis Stream queue + embedded workers)
-- `src/server/queue/github-queue-observer.ts` (queue health snapshot reader)
-- `src/server/github/raw-client.ts` (direct GitHub HTTP client, worker-only in queue mode)
+- `worker/index.ts` (Workers entry: vinext `fetch` + Queue `queue()` consumer; calls `setEnv(env)`)
+- `src/server/env.ts` (bindings adapter: `getEnv()` returns DB / CACHE / SCORE_QUEUE)
+- `src/server/api/score-jobs.ts` (async jobs on D1 + Queue, `processScoreJob` consumer)
+- `src/server/queue/github-queue-observer.ts` (queue health snapshot from D1)
+- `src/server/github/raw-client.ts` (direct GitHub HTTP client)
 
 ---
 
@@ -60,39 +53,32 @@ Fetches the last **180 days** of a user's public activity via GitHub REST API.
 | **Expand repos** | `GET /users/:name/repos` and enumerate repo commits by `author + since/until` |
 | **Dedupe** | Merge event-derived and repo-derived commits by `repo:sha` |
 | **Enrich** | Fetch commit details (`GET /repos/:repo/commits/:sha`) for stats — up to 120 commits with token (30 without), 5 concurrent |
-| **Transport** | Queue-backed GitHub requests when `REDIS_URL` is set; direct HTTP fallback when queue is disabled |
+| **Transport** | Direct GitHub HTTP via `raw-client.ts`; concurrency bounded by Queue `max_concurrency` (4) |
 
 ### Error handling
 - `GitHubNotFoundError` → 404 to client
 - `GitHubRateLimitError` → 429 to client, stops enrichment early
-- Retries on 502/503/504 (up to 2 retries, exponential backoff)
+- Retries on any 5xx and on network errors (up to 2 retries, exponential backoff); a 429 /
+  rate-limit 403 whose reset is within 30s is waited out and retried
+- A non-GitHub error during commit enrichment (e.g. Workers "Too many subrequests") fails the
+  job with `server_error` instead of caching a score built from partial data
+- `getCommit` keeps only `sha`, message, author date, `stats` and file names (no patches)
 - Events pagination limit (`422`) is handled gracefully and exposed as a limitation flag
 
-### Queue mode reliability
-- Queue implementation uses Redis Streams + consumer groups.
-- Embedded workers run inside the same Node service process (no separate BullMQ service).
-- Retries are delayed with exponential backoff and jitter.
-- Rate-limit responses are rescheduled close to GitHub reset time.
-- Stale in-flight jobs are reclaimed with `XAUTOCLAIM`.
-- Worker/retry/timeout behavior can be tuned via `GITHUB_QUEUE_*` env vars.
-- Public read-only queue telemetry is available at `/api/queue/github` and `/ops/queue`.
-- Queue observer uses a dedicated read-only Redis client; compare Redis-backed and process-local counters together during dev reload debugging.
-- Queue mode centralizes all GitHub requests, but score-job snapshots are still process-memory state.
+### Job pipeline reliability
+- Cloudflare Queue `ays-score-jobs`: `max_batch_size` 1, `max_concurrency` 4, `max_retries` 2.
+- Scoring errors mark the job `failed` (no retry); only D1/infra errors make the consumer retry.
+- The consumer claims a job atomically (`UPDATE ... WHERE status = 'queued' ... RETURNING`), so a
+  duplicate delivery of a live job is a no-op; a retry delivery may take over its own running row.
+- On the last delivery attempt the consumer marks the job `failed` / `server_error` and acks.
+- `running` jobs not updated for 15 min (`STALE_MS`), and `queued` jobs older than 6h
+  (`QUEUED_STALE_MS`), are reported as `failed` / `server_error` and left out of queue stats.
+- Job snapshots live in D1, so polling is consistent across isolates.
 
 ### Queue observability snapshot contract
 
-`GET /api/queue/github` returns:
-
-- `health` + `warnings` for high-level status.
-- `queue` + `consumers` from Redis stream/group metadata.
-- `client_selection` (transport selection counters from `createGitHubClient`).
-- `runtime` (process-local queue runtime counters).
-
-Interpretation model:
-
-- Redis-backed fields (`queue`, `consumers`) describe shared infrastructure state.
-- Process-local fields (`client_selection`, `runtime`) describe behavior of the serving runtime.
-- During burst load, expect `client_selection.queued`, `runtime.enqueued`, and `queue.processed_entries` to increase.
+`GET /api/queue/github` returns `health`, `warnings`, `queue` and `consumers`, all derived from
+D1 `score_jobs`. Without Cloudflare bindings it reports `enabled: false`, `health: "disabled"`.
 
 ### Core type: `ContributionEvent`
 ```ts
@@ -238,44 +224,36 @@ Based on data density:
 
 ## 3. Caching (`src/server/cache/`)
 
-In-memory `Map<string, CacheEntry>` keyed by lowercase username.
+Workers KV (`CACHE` binding), 12h TTL:
 
-| Parameter | Value |
-|-----------|-------|
-| TTL | 12 hours |
-| Max size | 1,000 entries |
-| Eviction | Expired entries first, then LRU by expiry time |
+| Key | Value |
+|-----|-------|
+| `score:v1:<lowercased username>` | JSON `{ value: SlopScoreResult, expiresAt }` |
+| `og:v1:<lowercased username>` | prerendered OG PNG |
 
-Also includes an in-memory commit artifact cache (`repo:sha`) for commit-detail enrichment reuse.
+The commit artifact cache (`repo:sha`) stays in isolate memory (best effort).
 
 ---
 
 ## 4. Rate Limiting (`src/server/rate-limit/`)
 
-In-memory sliding-window limiter per client IP.
-
-| Parameter | Value |
-|-----------|-------|
-| Window | 10 minutes |
-| Max requests | 30 per window |
-| Key | `x-forwarded-for` or `x-real-ip` header |
+Window counters in D1 `rate_limits`, keyed by `scope:ip` (`x-forwarded-for` or `x-real-ip`).
+Each key's window starts at its first request and lasts `windowMs` (one upsert per check).
+Fails open if D1 is unavailable.
 
 ---
 
 ## 5. Leaderboard (`src/server/leaderboard/`)
 
-Redis-backed storage at key `ays:leaderboard:v1:state`.
+D1 table `leaderboard` (one row per lowercased username) plus `counters.leaderboard_unique` for
+`total_analyzed`.
 
 | Parameter | Value |
 |-----------|-------|
-| Max entries | 200 |
 | Min update interval | 10 min per user |
 | Default query limit | 50 |
 | Confidence floor | `medium` (filters out `low` confidence) |
 | Sort | Score desc → most recent → username alpha |
-| Concurrency | Optimistic concurrency control (WATCH/MULTI/EXEC) |
-
-**Storage model:** The entire leaderboard is stored as a single JSON blob in Redis. Updates use optimistic locking: the key is WATCHed, the state is read, updated, and saved via MULTI/EXEC. If a concurrent update occurs, the transaction fails and retries automatically (up to 10 attempts with exponential backoff).
 
 ---
 

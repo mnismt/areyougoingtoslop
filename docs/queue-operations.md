@@ -1,12 +1,11 @@
 # Queue Operations
 
-Redis-backed GitHub request queue: verification, observability, and debugging.
+Score-job pipeline on Cloudflare (D1 `score_jobs` + Queue `ays-score-jobs`): verification, observability, and debugging.
 
 ## Prerequisites
 
-- App is running on `http://localhost:3000`.
-- `REDIS_URL` is set and reachable.
-- Optional: `GITHUB_TOKEN` is set to reduce rate-limit noise.
+- `bun run db:migrate:local`, then `bun run dev` (or `bun run build && bun run preview` on :4173). D1, KV and the Queue run in miniflare.
+- `GITHUB_TOKEN` and `OPS_TOKEN` in `.env` or `.dev.vars` (both gitignored).
 
 ---
 
@@ -19,7 +18,7 @@ curl -s -X POST "http://localhost:3000/api/score/sindresorhus/jobs"
 ```
 
 Expected:
-- Status `202` while running, or `200` if cached completion is returned immediately.
+- Status `202` while queued/running (a second POST for the same user returns the same `job_id`), or `200` if cached completion is returned immediately.
 - Body includes `job_id`, `status`, `stage`, `coverage`, and `limits`.
 
 ### 2) Poll Job Snapshot
@@ -47,196 +46,75 @@ Important distinction:
 - `job_not_found` means the polling job id is unknown/expired.
 - `snapshot.error.code = "not_found"` means the GitHub username itself does not exist.
 
-### 4) Verify Queue Activity in Redis
+### 4) Verify Queue and Storage Activity
 
-```bash
-redis-cli --raw KEYS "ays:gh:req:*"
+The dev/preview log prints one line per consumer batch:
+
+```
+QUEUE ays-score-jobs 1/1 (5339ms)
 ```
 
-Expected keys appear during traffic, including stream/delay/result keys:
-- `ays:gh:req:stream`
-- `ays:gh:req:delayed`
-- `ays:gh:req:result:*`
-
-### 5) Queue Monitoring Page
+Inspect local state (shared with the running server):
 
 ```bash
-curl -s "http://localhost:3000/api/queue/github"
+bunx wrangler d1 execute DB --local --command "SELECT username_key,status,updated_at FROM score_jobs ORDER BY updated_at DESC LIMIT 20" --json
+bunx wrangler d1 execute DB --local --command "SELECT username,slop_score FROM leaderboard" --json
+bunx wrangler kv key list --binding CACHE --local   # score:v1:<user>, og:v1:<user>
 ```
 
-Expected:
-- `health`: `ok|degraded|disabled`
-- `queue.lag`, `queue.pending`, `queue.delayed` counters are present
-- `queue.online_consumers` may spike during active work and return to `0` on idle snapshots
-- `client_selection` and `runtime` objects are present for in-process queue diagnostics
+Production: drop `--local` for `--remote`, and watch `bunx wrangler tail`.
 
-UI:
-- Open `http://localhost:3000/ops/queue` for the public live dashboard.
-
-### 6) Burst Test (Recommended)
-
-Start multiple usernames in parallel to force queue traffic:
+### 5) Check Health Endpoint
 
 ```bash
-for u in torvalds gaearon yyx990803 sindresorhus octocat defunkt; do
-  curl -s -X POST "http://localhost:3000/api/score/$u/jobs" >/dev/null &
-done
-wait
+curl -s -H "authorization: Bearer $OPS_TOKEN" "http://localhost:3000/api/queue/github"
 ```
 
-Then poll queue snapshot a few times:
-
-```bash
-for i in 1 2 3 4 5 6; do
-  curl -s "http://localhost:3000/api/queue/github"
-  sleep 1
-done
-```
-
-Expected under load:
-- `client_selection.queued` increases.
-- `runtime.enqueued` increases.
-- `queue.processed_entries` increases.
-- `queue.pending` / `queue.lag` may briefly rise and then return to `0` after drain.
+- `401` without a valid bearer token. `200` with `cache-control: no-store` otherwise.
+- `/ops/queue/snapshot` serves the same JSON to the `/ops/queue` page.
 
 ---
 
-## Observability
+## Health Snapshot Fields
 
-The app exposes a public, read-only queue dashboard (no request payloads, no tokens, no user-specific data):
+Everything is derived from one D1 query over `score_jobs` (active rows plus terminal rows from the last 30 minutes). There is no Redis and no process-local state, so every isolate reports the same numbers.
 
-- API: `GET /api/queue/github`
-- UI: `/ops/queue`
+- `enabled`: `false` when the Cloudflare bindings are unavailable (`health: "disabled"`).
+- `health`: `ok`, `disabled`, or `degraded` (the D1 read failed; see `warnings[]`).
 
-### API Contract (`GET /api/queue/github`)
+#### `queue`
 
-Top-level fields:
+- `workers_configured`: `4`, the consumer's `max_concurrency` in `wrangler.jsonc`.
+- `stream_initialized`: always `true`.
+- `lag`: jobs with status `queued`.
+- `pending`: jobs with status `running`.
+- `known_consumers`, `online_consumers`, `active_consumers`: all equal the running-job count.
+- `delayed`: always `0`. `next_retry_at` / `next_retry_in_ms`: always `null`.
+- `processed_entries`: completed + failed jobs in the retention window.
 
-- `enabled`: whether queue mode is enabled (`REDIS_URL` present).
-- `health`: `disabled | ok | degraded`.
-- `generated_at`: snapshot timestamp.
-- `warnings[]`: non-fatal diagnostics.
+#### `consumers`
 
-#### `queue` (Redis-backed)
+One entry per running job: `name` (`job-<first 8 chars of job_id>`), `pending: 1`, `idle_ms` since its last progress write, `inactive_ms: null`, `current_usernames`.
 
-- `workers_configured`: configured worker concurrency (`GITHUB_QUEUE_WORKERS`, default 4).
-- `stream_initialized`: whether worker group exists on the stream.
-- `lag`: undispatched entries from stream/group perspective.
-- `pending`: entries claimed but not acknowledged.
-- `delayed`: retry backlog in delayed zset.
-- `known_consumers`: total consumers recorded in Redis stream-group metadata.
-- `online_consumers`: consumers considered online recently (`idle_ms <= 60s`).
-- `active_consumers`: backward-compatible alias of `online_consumers`.
-- `processed_entries`: total entries read by the consumer group (`entries-read` when available).
-- `next_retry_at`: next delayed retry timestamp (ISO) if present.
-- `next_retry_in_ms`: milliseconds until next delayed retry if present.
+#### Usernames
 
-#### `consumers` (Redis-backed)
+- `active_score_usernames`: queued and running usernames.
+- `recent_usernames`: last 10 distinct completed usernames.
 
-Per-consumer view from `XINFO CONSUMERS`:
-
-- `name`
-- `pending`
-- `idle_ms`
-- `inactive_ms`
-
-#### `client_selection` (process-local)
-
-How `createGitHubClient()` selected transport in this runtime:
-
-- `queued`: queue transport was selected.
-- `raw_fetcher`: direct/raw client selected because custom fetcher was supplied.
-- `raw_queue_disabled`: direct/raw client selected because queue disabled.
-- `last_selected`, `updated_at`: most recent mode/timestamp.
-
-#### `runtime` (process-local)
-
-Queue runtime counters in current process:
-
-- `started`: worker runtime marked as started.
-- `has_command_client`: command Redis client exists.
-- `worker_starts`: number of worker-loop starts in this process lifecycle.
-- `enqueued`: number of requests enqueued.
-- `worker_processed`: number of stream messages processed by worker loops.
-- `responses_stored`: number of queue responses written to Redis result keys.
-- `responses_consumed`: number of queue responses consumed by waiting callers.
-- `retries_scheduled`: number of retries scheduled to delayed zset.
-- `timeouts`: request waits that hit queue timeout.
-
-### Interpreting Metrics
-
-Use both layers. Each alone can be misleading in dev.
-
-- `client_selection.queued > 0` proves app code path selected queued transport.
-- `runtime.enqueued` rising proves this runtime enqueued work.
-- `queue.processed_entries` rising proves Redis consumer group processed messages.
-- `queue.pending/lag` can spike briefly under burst load and return to 0 quickly.
-- `online_consumers` can drop to 0 on idle snapshots; this is not automatically an error.
-- `known_consumers` can exceed `workers_configured` if stale Redis consumer metadata exists.
+`client_selection` and `runtime` are gone. They were process-local Redis transport counters and mean nothing across Worker isolates.
 
 ---
 
-## Debugging
+## Failure Signatures
 
-### Quick Debug Playbook
+- Job stays `queued`, log shows no `QUEUE` line: the consumer is not running. Check the `queues.consumers` block in `wrangler.jsonc` and that the queue exists (`bunx wrangler queues list`).
+- Job reads `failed` with `server_error`: either the consumer's last delivery attempt failed (it marks the job failed), a `running` job made no progress for 15 minutes (`STALE_MS`, the consumer died), or a `queued` job waited over 6 hours (`QUEUED_STALE_MS`). Waiting in a normal backlog does not fail a job. The next POST for that user replaces the stale row; stale rows are left out of `lag` / `pending` / `consumers`.
+- `score_job_failed` in the log: an unexpected scoring error, with its stack. Typical GitHub causes surface as job errors instead (`not_found`, `rate_limited`).
+- `score_job_infra_error` in the log: a D1 write failed inside the consumer; the message is retried (`max_retries: 2`, 30s delay).
+- `health: "degraded"`: the snapshot query failed; inspect `warnings[]`.
 
-1) Capture baseline snapshot.
+## Known Limits
 
-```bash
-curl -s "http://localhost:3000/api/queue/github"
-```
-
-2) Trigger burst load with different usernames.
-
-```bash
-for u in torvalds gaearon yyx990803 sindresorhus octocat defunkt; do
-  curl -s -X POST "http://localhost:3000/api/score/$u/jobs" >/dev/null &
-done
-wait
-```
-
-3) Poll queue snapshot for ~5-10 seconds.
-
-```bash
-for i in 1 2 3 4 5 6; do
-  curl -s "http://localhost:3000/api/queue/github"
-  sleep 1
-done
-```
-
-### Common Mismatch Patterns
-
-- `client_selection.queued = 0` and `raw_queue_disabled > 0`
-  - Queue mode disabled in app runtime (check `REDIS_URL`).
-- `client_selection.queued > 0`, `runtime.enqueued` rising, but `queue.processed_entries` flat
-  - Worker/group not processing (check Redis connectivity/group state).
-- `queue.processed_entries` rising but score jobs are stuck
-  - Investigate result key lifecycle, timeout settings, and request retries.
-- `health: degraded`
-  - Snapshot read is partial; inspect `warnings[]` for specific failing Redis read.
-
-### Known Issues & Fixes
-
-We hit two real-world issues during local testing:
-
-- Score jobs progressed (`discovering -> enriching -> completed`) while queue snapshots looked idle.
-- `/api/queue/github` intermittently returned `500` with `Cannot read properties of undefined (reading 'worker_starts')`.
-
-**Root causes:**
-- Redis-backed telemetry and process-local runtime telemetry can diverge during dev/hot-reload windows.
-- A legacy in-memory queue runtime shape (missing `metrics`) could survive reloads, causing runtime metric reads to crash.
-
-**Fixes implemented:**
-- Runtime metrics are now normalized/backfilled on every read so missing fields default to `0` instead of throwing.
-- Queue snapshot keeps two debug planes for cross-checking:
-  - `client_selection` and `runtime` (process-local behavior)
-  - `queue` and `consumers` (Redis-backed infrastructure state)
-
-### Quick Troubleshooting
-
-- Repeated `404` polling with a real `job_id` usually means the process restarted or the job aged out.
-- Score-job snapshots are in-process memory with a 30-minute retention window.
-- In development, duplicate `POST /jobs` calls can happen due to React Strict Mode behavior.
-- Process-local counters (`runtime`, `client_selection`) reset on restart and can be impacted by dev server reload behavior.
-- Redis-backed counters (`queue`, `consumers`) represent infrastructure state and may include previously-created consumer groups/consumers.
-- If queue telemetry looks inconsistent after major code changes, restart `bun dev` to clear stale in-memory runtime state.
+- Local miniflare dispatches queue batches one at a time, so `consumers` stays at 1 locally. Production honours `max_concurrency: 4`.
+- A job can make roughly 560 GitHub subrequests with a token. That needs the Workers Paid plan; miniflare does not enforce subrequest limits.
+- There is no shared GitHub backoff across jobs. A rate-limited job fails with `rate_limited`.

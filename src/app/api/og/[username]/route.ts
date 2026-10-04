@@ -10,6 +10,7 @@ import {
   createOgImageResponse,
   OG_IMAGE_CACHE_CONTROL,
   OG_IMAGE_HEIGHT,
+  OG_IMAGE_PENDING_CACHE_CONTROL,
   OG_IMAGE_WIDTH,
 } from '../og-response'
 
@@ -57,7 +58,7 @@ export const GET = async (_request: Request, { params }: Params) => {
   const { username } = await params
   const overrides = getRouteOverrides()
 
-  const cachedPng = overrides.getCachedOgImage(username)
+  const cachedPng = await overrides.getCachedOgImage(username)
   if (cachedPng) {
     return new Response(cachedPng, {
       headers: {
@@ -92,7 +93,7 @@ export const GET = async (_request: Request, { params }: Params) => {
 
   if (resolved.viewModel.variant === 'result') {
     const png = await image.arrayBuffer()
-    overrides.setCachedOgImage(username, png, OG_IMAGE_TTL_MS)
+    await overrides.setCachedOgImage(username, png, OG_IMAGE_TTL_MS)
     return new Response(png, {
       headers: {
         'Content-Type': 'image/png',
@@ -101,5 +102,10 @@ export const GET = async (_request: Request, { params }: Params) => {
     })
   }
 
-  return createOgImageResponse(image)
+  return createOgImageResponse(
+    image,
+    resolved.viewModel.variant === 'unavailable'
+      ? OG_IMAGE_PENDING_CACHE_CONTROL
+      : OG_IMAGE_CACHE_CONTROL,
+  )
 }

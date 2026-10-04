@@ -1,3 +1,4 @@
+import { getEnv } from '../env'
 import type { SlopScoreResult } from '../scoring'
 
 type CacheEntry = {
@@ -5,52 +6,40 @@ type CacheEntry = {
   expiresAt: number
 }
 
-const MAX_CACHE_SIZE = 1000
+const getKey = (username: string) => `score:v1:${username.toLowerCase()}`
 
-const scoreCache = new Map<string, CacheEntry>()
-
-export const getCachedScore = (username: string, now: Date) => {
-  const key = username.toLowerCase()
-  const entry = scoreCache.get(key)
-  if (!entry) {
+// KV is best-effort: a read/write failure degrades to a cache miss, never a failed request.
+export const getCachedScore = async (
+  username: string,
+  now: Date,
+): Promise<SlopScoreResult | null> => {
+  try {
+    const entry = (await getEnv().CACHE.get(
+      getKey(username),
+      'json',
+    )) as CacheEntry | null
+    if (!entry || entry.expiresAt <= now.getTime()) {
+      return null
+    }
+    return entry.value
+  } catch (error) {
+    console.warn('score_cache_read_failed', { username, error })
     return null
   }
-  if (entry.expiresAt <= now.getTime()) {
-    scoreCache.delete(key)
-    return null
-  }
-  return entry.value
 }
 
-export const setCachedScore = (
+export const setCachedScore = async (
   username: string,
   value: SlopScoreResult,
   now: Date,
   ttlMs: number,
-) => {
-  const key = username.toLowerCase()
-  scoreCache.set(key, { value, expiresAt: now.getTime() + ttlMs })
-
-  if (scoreCache.size > MAX_CACHE_SIZE) {
-    const nowMs = now.getTime()
-    for (const [k, entry] of scoreCache) {
-      if (entry.expiresAt <= nowMs) {
-        scoreCache.delete(k)
-      }
-    }
-
-    if (scoreCache.size > MAX_CACHE_SIZE) {
-      const sorted = [...scoreCache.entries()].sort(
-        (a, b) => a[1].expiresAt - b[1].expiresAt,
-      )
-      const toRemove = sorted.length - MAX_CACHE_SIZE
-      for (let i = 0; i < toRemove; i++) {
-        scoreCache.delete(sorted[i][0])
-      }
-    }
+): Promise<void> => {
+  const entry: CacheEntry = { value, expiresAt: now.getTime() + ttlMs }
+  try {
+    await getEnv().CACHE.put(getKey(username), JSON.stringify(entry), {
+      expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)),
+    })
+  } catch (error) {
+    console.warn('score_cache_write_failed', { username, error })
   }
-}
-
-export const clearScoreCache = () => {
-  scoreCache.clear()
 }

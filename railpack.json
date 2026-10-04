@@ -1,5 +1,0 @@
-{
-  "deploy": {
-    "startCommand": "bun run scripts/run-migrations.ts && bun run start"
-  }
-}

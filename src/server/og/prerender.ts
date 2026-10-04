@@ -1,10 +1,10 @@
 import { ImageResponse } from 'next/og'
-import { fetchAvatarDataUri, toResultViewModel } from '../../app/api/og/og-data'
 import { renderOgCard } from '../../app/api/og/og-card'
+import { fetchAvatarDataUri, toResultViewModel } from '../../app/api/og/og-data'
 import { loadOgFonts } from '../../app/api/og/og-fonts'
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../../app/api/og/og-response'
-import { getCachedOgImage, setCachedOgImage } from '../cache/og-image-cache'
 import type { ScoreCoverage, ScoreLimits } from '../api/score'
+import { getCachedOgImage, setCachedOgImage } from '../cache/og-image-cache'
 import type { SlopScoreResult } from '../scoring'
 
 const OG_IMAGE_TTL_MS = 12 * 60 * 60 * 1000
@@ -15,7 +15,7 @@ export const prerenderOgImage = async (
   coverage: ScoreCoverage,
   limits: ScoreLimits,
 ): Promise<void> => {
-  if (getCachedOgImage(username) !== null) {
+  if ((await getCachedOgImage(username)) !== null) {
     return
   }
 
@@ -40,7 +40,7 @@ export const prerenderOgImage = async (
   })
 
   const png = await image.arrayBuffer()
-  setCachedOgImage(username, png, OG_IMAGE_TTL_MS)
+  await setCachedOgImage(username, png, OG_IMAGE_TTL_MS)
 
   console.info('og_prerender', { username, bytes: png.byteLength })
 }

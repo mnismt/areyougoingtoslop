@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto'
-import { performance } from 'node:perf_hooks'
 import { getCachedScore, setCachedScore } from '../cache'
-import { prerenderOgImage } from '../og/prerender'
+import { getEnv, type ScoreJobMessage } from '../env'
 import {
   GitHubNotFoundError,
   GitHubOrganizationError,
@@ -11,11 +9,8 @@ import {
 } from '../github'
 import { createGitHubClient } from '../github/client'
 import { upsertLeaderboardEntry } from '../leaderboard'
+import { prerenderOgImage } from '../og/prerender'
 import { getScoreP95, recordScoreTiming } from '../perf/metrics'
-import {
-  getGitHubQueueCommandClient,
-  isGitHubRequestQueueEnabled,
-} from '../queue/github-request-queue'
 import type { SlopScoreResult } from '../scoring'
 import {
   type ScoreCoverage,
@@ -51,46 +46,25 @@ export type ScoreJobSnapshot = {
   updated_at: string
 }
 
-type InternalScoreJob = {
-  jobId: string
-  username: string
-  status: ScoreJobStatus
-  stage: ScoreJobSnapshot['stage']
-  progressPercent: number
-  result: SlopScoreResult | null
-  coverage: ScoreCoverage
-  limits: ScoreLimits
-  error: ScoreJobError | null
-  createdAt: string
-  updatedAt: string
-  lastPersistedAt: number
-}
-
-type ScoreJobRuntimeState = {
-  jobs: Map<string, InternalScoreJob>
-  activeByUsername: Map<string, string>
-}
-
 const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000
-const JOB_RETENTION_MS = 30 * 60 * 1000
-const SCORE_JOB_KEY_PREFIX = 'ays:score:job:'
-const SCORE_ACTIVE_KEY_PREFIX = 'ays:score:active:'
+export const JOB_RETENTION_MS = 30 * 60 * 1000
+// Matches the queue consumer's 15-minute wall clock: a running job not updated for this long is dead.
+export const STALE_MS = 15 * 60 * 1000
+// A queued row only waits on the backlog, so it gets a far larger allowance before it is presumed lost.
+export const QUEUED_STALE_MS = 6 * 60 * 60 * 1000
 const PROGRESS_DEBOUNCE_MS = 2_000
-
-const getRuntimeState = (): ScoreJobRuntimeState => {
-  const globalState = globalThis as typeof globalThis & {
-    __aysScoreJobsState?: ScoreJobRuntimeState
-  }
-
-  if (!globalState.__aysScoreJobsState) {
-    globalState.__aysScoreJobsState = {
-      jobs: new Map<string, InternalScoreJob>(),
-      activeByUsername: new Map<string, string>(),
-    }
-  }
-
-  return globalState.__aysScoreJobsState
-}
+// Binds (runningCutoff, queuedCutoff); see staleCutoffs().
+export const STALE_SQL =
+  "((status = 'running' AND updated_at < ?) OR (status = 'queued' AND updated_at < ?))"
+export const staleCutoffs = (now = Date.now()) =>
+  [now - STALE_MS, now - QUEUED_STALE_MS] as const
+export const isStale = (
+  status: ScoreJobStatus,
+  updatedAt: number,
+  now = Date.now(),
+) =>
+  (status === 'running' && updatedAt < now - STALE_MS) ||
+  (status === 'queued' && updatedAt < now - QUEUED_STALE_MS)
 
 const emptyCoverage: ScoreCoverage = {
   commits_discovered: 0,
@@ -107,101 +81,9 @@ const emptyLimits: ScoreLimits = {
   events_pagination_limited: false,
 }
 
-const toSnapshot = (job: InternalScoreJob): ScoreJobSnapshot => ({
-  job_id: job.jobId,
-  username: job.username,
-  status: job.status,
-  stage: job.stage,
-  progress_percent: job.progressPercent,
-  result: job.result,
-  coverage: job.coverage,
-  limits: job.limits,
-  error: job.error,
-  created_at: job.createdAt,
-  updated_at: job.updatedAt,
-})
-
-const touch = (job: InternalScoreJob) => {
-  job.updatedAt = new Date().toISOString()
-}
-
-const cleanupJobs = () => {
-  const { jobs, activeByUsername } = getRuntimeState()
-  const cutoff = Date.now() - JOB_RETENTION_MS
-  for (const [jobId, job] of jobs) {
-    const updatedAt = new Date(job.updatedAt).getTime()
-    if (!Number.isNaN(updatedAt) && updatedAt < cutoff) {
-      jobs.delete(jobId)
-      const key = job.username.toLowerCase()
-      if (activeByUsername.get(key) === jobId) {
-        activeByUsername.delete(key)
-      }
-    }
-  }
-}
-
-const getScoreJobRedis = () => {
-  if (!isGitHubRequestQueueEnabled()) return null
-  return getGitHubQueueCommandClient()
-}
-
-const persistJobToRedis = async (job: InternalScoreJob, force = false) => {
-  const redis = getScoreJobRedis()
-  if (!redis) return
-
-  const now = Date.now()
-  if (!force && now - job.lastPersistedAt < PROGRESS_DEBOUNCE_MS) return
-  job.lastPersistedAt = now
-
-  await redis.set(
-    `${SCORE_JOB_KEY_PREFIX}${job.jobId}`,
-    JSON.stringify(toSnapshot(job)),
-    'PX',
-    JOB_RETENTION_MS,
-  )
-}
-
-const setActiveJobInRedis = async (username: string, jobId: string) => {
-  const redis = getScoreJobRedis()
-  if (!redis) return
-  await redis.set(
-    `${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`,
-    jobId,
-    'PX',
-    JOB_RETENTION_MS,
-  )
-}
-
-const clearActiveJobInRedis = async (username: string, jobId: string) => {
-  const redis = getScoreJobRedis()
-  if (!redis) return
-  const key = `${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`
-  const current = await redis.get(key)
-  if (current === jobId) {
-    await redis.del(key)
-  }
-}
-
-const getActiveJobIdFromRedis = async (
-  username: string,
-): Promise<string | null> => {
-  const redis = getScoreJobRedis()
-  if (!redis) return null
-  return redis.get(`${SCORE_ACTIVE_KEY_PREFIX}${username.toLowerCase()}`)
-}
-
-const getJobSnapshotFromRedis = async (
-  jobId: string,
-): Promise<ScoreJobSnapshot | null> => {
-  const redis = getScoreJobRedis()
-  if (!redis) return null
-  const raw = await redis.get(`${SCORE_JOB_KEY_PREFIX}${jobId}`)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as ScoreJobSnapshot
-  } catch {
-    return null
-  }
+const serverError: ScoreJobError = {
+  code: 'server_error',
+  message: 'Unable to compute score right now.',
 }
 
 const mapError = (error: unknown): ScoreJobError => {
@@ -234,102 +116,54 @@ const mapError = (error: unknown): ScoreJobError => {
     }
   }
 
-  return {
-    code: 'server_error',
-    message: 'Unable to compute score right now.',
-  }
+  return serverError
 }
 
-const runScoreJob = async (jobId: string) => {
-  const { jobs, activeByUsername } = getRuntimeState()
-  const job = jobs.get(jobId)
-  if (!job) {
-    return
-  }
+const db = () => getEnv().DB
 
-  const start = performance.now()
-  job.status = 'running'
-  job.stage = 'discovering'
-  job.progressPercent = 5
-  touch(job)
-  await persistJobToRedis(job, true)
-
-  try {
-    const result = await scoreUserWithMetadata(job.username, {
-      onProgress: async (progress) => {
-        const prevStage = job.stage
-        job.status = 'running'
-        job.stage = progress.stage
-        job.progressPercent = progress.progress_percent
-        job.result = progress.result
-        job.coverage = progress.coverage
-        job.limits = progress.limits
-        job.error = null
-        touch(job)
-        await persistJobToRedis(job, prevStage !== progress.stage)
-      },
-    })
-
-    job.status = 'completed'
-    job.stage = 'finalizing'
-    job.progressPercent = 100
-    job.result = result.result
-    job.coverage = result.coverage
-    job.limits = result.limits
-    job.error = null
-    touch(job)
-    await persistJobToRedis(job, true)
-
-    const now = new Date()
-    setCachedScore(job.username, result.result, now, DEFAULT_CACHE_TTL_MS)
-
-    void prerenderOgImage(
-      job.username,
-      result.result,
-      result.coverage,
-      result.limits,
-    ).catch((err) =>
-      console.warn('og_prerender_failed', { username: job.username, err }),
+const insertJob = (snapshot: ScoreJobSnapshot, now: number, orIgnore = '') =>
+  db()
+    .prepare(
+      `INSERT ${orIgnore} INTO score_jobs (job_id, username_key, status, snapshot, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING job_id`,
     )
+    .bind(
+      snapshot.job_id,
+      snapshot.username.toLowerCase(),
+      snapshot.status,
+      JSON.stringify(snapshot),
+      now,
+      now,
+    )
+    .first<{ job_id: string }>()
 
-    await upsertLeaderboardEntry({
-      username: job.username,
-      slop_score: result.result.slop_score,
-      tier: result.result.tier,
-      tier_tagline: result.result.tier_tagline,
-      confidence: result.result.confidence,
-      last_scored_at: now.toISOString(),
-    })
+const saveJob = async (snapshot: ScoreJobSnapshot) => {
+  snapshot.updated_at = new Date().toISOString()
+  await db()
+    .prepare(
+      'UPDATE score_jobs SET status = ?, snapshot = ?, updated_at = ? WHERE job_id = ?',
+    )
+    .bind(
+      snapshot.status,
+      JSON.stringify(snapshot),
+      Date.now(),
+      snapshot.job_id,
+    )
+    .run()
+}
 
-    const durationMs = performance.now() - start
-    recordScoreTiming(durationMs)
-    const p95 = getScoreP95()
-    console.info('score_request', {
-      username: job.username,
-      duration_ms: Math.round(durationMs),
-      p95_ms: p95 ? Math.round(p95) : null,
-      source: 'score_job',
-    })
-  } catch (error) {
-    job.status = 'failed'
-    job.stage = 'finalizing'
-    job.error = mapError(error)
-    job.progressPercent = 100
-    touch(job)
-    await persistJobToRedis(job, true)
-  } finally {
-    const key = job.username.toLowerCase()
-    if (activeByUsername.get(key) === jobId) {
-      activeByUsername.delete(key)
-    }
-    await clearActiveJobInRedis(job.username, jobId)
-  }
+// The active job if any, else the latest completed one. D1 sees its own writes, unlike KV,
+// whose edge can cache a miss for ~60s and so would trigger a full rescore right after a job finishes.
+const getReusableSnapshot = async (usernameKey: string) => {
+  const row = await db()
+    .prepare(
+      "SELECT snapshot FROM score_jobs WHERE username_key = ? AND status != 'failed' ORDER BY status = 'completed', updated_at DESC LIMIT 1",
+    )
+    .bind(usernameKey)
+    .first<{ snapshot: string }>()
+  return row ? (JSON.parse(row.snapshot) as ScoreJobSnapshot) : null
 }
 
 export const createOrAttachScoreJob = async (usernameRaw: string) => {
-  const { jobs, activeByUsername } = getRuntimeState()
-  cleanupJobs()
-
   const username = usernameRaw.trim()
   if (!isValidGitHubUsername(username)) {
     return {
@@ -359,39 +193,34 @@ export const createOrAttachScoreJob = async (usernameRaw: string) => {
     // Let the error propagate through normal scoring flow
   }
 
-  const existingJobId = activeByUsername.get(username.toLowerCase())
-  if (existingJobId) {
-    const existingJob = jobs.get(existingJobId)
-    if (existingJob && existingJob.status !== 'failed') {
-      return {
-        ok: true as const,
-        snapshot: toSnapshot(existingJob),
-      }
-    }
+  const key = username.toLowerCase()
+  const nowMs = Date.now()
+  await db().batch([
+    db()
+      .prepare(
+        "DELETE FROM score_jobs WHERE status IN ('completed','failed') AND updated_at < ?",
+      )
+      .bind(nowMs - JOB_RETENTION_MS),
+    db()
+      .prepare(`DELETE FROM score_jobs WHERE username_key = ? AND ${STALE_SQL}`)
+      .bind(key, ...staleCutoffs(nowMs)),
+  ])
+
+  const reusable = await getReusableSnapshot(key)
+  if (reusable) {
+    return { ok: true as const, snapshot: reusable }
   }
 
-  const remoteJobId = await getActiveJobIdFromRedis(username)
-  if (remoteJobId && remoteJobId !== existingJobId) {
-    const remoteSnapshot = await getJobSnapshotFromRedis(remoteJobId)
-    if (remoteSnapshot && remoteSnapshot.status !== 'failed') {
-      return {
-        ok: true as const,
-        snapshot: remoteSnapshot,
-      }
-    }
-  }
-
-  const now = new Date()
-  const cached = getCachedScore(username, now)
+  const now = new Date(nowMs)
+  const createdAt = now.toISOString()
+  const cached = await getCachedScore(username, now)
   if (cached) {
-    const jobId = randomUUID()
-    const createdAt = now.toISOString()
-    const job: InternalScoreJob = {
-      jobId,
+    const snapshot: ScoreJobSnapshot = {
+      job_id: crypto.randomUUID(),
       username,
       status: 'completed',
       stage: 'finalizing',
-      progressPercent: 100,
+      progress_percent: 100,
       result: cached,
       coverage: {
         ...emptyCoverage,
@@ -404,62 +233,182 @@ export const createOrAttachScoreJob = async (usernameRaw: string) => {
       },
       limits: emptyLimits,
       error: null,
-      createdAt,
-      updatedAt: createdAt,
-      lastPersistedAt: 0,
+      created_at: createdAt,
+      updated_at: createdAt,
     }
-
-    jobs.set(jobId, job)
-    await persistJobToRedis(job, true)
-
-    return {
-      ok: true as const,
-      snapshot: toSnapshot(job),
-    }
+    await insertJob(snapshot, nowMs)
+    return { ok: true as const, snapshot }
   }
 
-  const createdAt = now.toISOString()
-  const jobId = randomUUID()
-  const job: InternalScoreJob = {
-    jobId,
+  const snapshot: ScoreJobSnapshot = {
+    job_id: crypto.randomUUID(),
     username,
     status: 'queued',
     stage: 'queued',
-    progressPercent: 0,
+    progress_percent: 0,
     result: null,
     coverage: emptyCoverage,
     limits: emptyLimits,
     error: null,
-    createdAt,
-    updatedAt: createdAt,
-    lastPersistedAt: 0,
+    created_at: createdAt,
+    updated_at: createdAt,
   }
 
-  jobs.set(jobId, job)
-  activeByUsername.set(username.toLowerCase(), jobId)
-  await setActiveJobInRedis(username, jobId)
-  await persistJobToRedis(job, true)
-
-  void runScoreJob(jobId)
-
-  return {
-    ok: true as const,
-    snapshot: toSnapshot(job),
+  // The partial unique index allows one active job per username; a lost race returns null.
+  if (!(await insertJob(snapshot, nowMs, 'OR IGNORE'))) {
+    const winner = await getReusableSnapshot(key)
+    if (winner) return { ok: true as const, snapshot: winner }
+    throw new Error('score_job_insert_conflict')
   }
+
+  try {
+    await getEnv().SCORE_QUEUE.send({ job_id: snapshot.job_id, username })
+  } catch (error) {
+    await db()
+      .prepare('DELETE FROM score_jobs WHERE job_id = ?')
+      .bind(snapshot.job_id)
+      .run()
+    throw error
+  }
+
+  return { ok: true as const, snapshot }
 }
 
-export const getScoreJob = async (jobId: string) => {
-  const { jobs } = getRuntimeState()
-  cleanupJobs()
-  const job = jobs.get(jobId)
-  if (job) {
-    return toSnapshot(job)
+export const getScoreJob = async (
+  jobId: string,
+): Promise<ScoreJobSnapshot | null> => {
+  const row = await db()
+    .prepare(
+      'SELECT snapshot, status, updated_at FROM score_jobs WHERE job_id = ?',
+    )
+    .bind(jobId)
+    .first<{ snapshot: string; status: ScoreJobStatus; updated_at: number }>()
+  if (!row) return null
+
+  const snapshot = JSON.parse(row.snapshot) as ScoreJobSnapshot
+  if (isStale(row.status, row.updated_at)) {
+    return {
+      ...snapshot,
+      status: 'failed',
+      stage: 'finalizing',
+      progress_percent: 100,
+      error: serverError,
+    }
   }
-  return getJobSnapshotFromRedis(jobId)
+  return snapshot
 }
 
-export const clearScoreJobs = async () => {
-  const { jobs, activeByUsername } = getRuntimeState()
-  jobs.clear()
-  activeByUsername.clear()
+// Queue consumer entry. Scoring errors are recorded on the job; only D1/infra errors throw
+// (which makes the queue retry). Terminal or missing jobs are skipped, so redelivery is safe.
+export const processScoreJob = async (
+  message: ScoreJobMessage,
+  attempts = 1,
+) => {
+  // Atomic claim: a duplicate first delivery of a live running job gets no row. A retry
+  // (attempts > 1) follows a failed attempt of this same message, so it may take over a running row.
+  const now0 = Date.now()
+  const row = await db()
+    .prepare(
+      "UPDATE score_jobs SET status = 'running', updated_at = ? WHERE job_id = ? AND (status = 'queued' OR (status = 'running' AND updated_at < ?)) RETURNING snapshot",
+    )
+    .bind(now0, message.job_id, attempts > 1 ? now0 + 1 : now0 - STALE_MS)
+    .first<{ snapshot: string }>()
+  if (!row) return
+
+  const job = JSON.parse(row.snapshot) as ScoreJobSnapshot
+  const start = Date.now()
+  job.status = 'running'
+  job.stage = 'discovering'
+  job.progress_percent = 5
+  await saveJob(job)
+  let lastPersistedAt = Date.now()
+
+  let scored: Awaited<ReturnType<typeof scoreUserWithMetadata>>
+  try {
+    scored = await scoreUserWithMetadata(job.username, {
+      onProgress: async (progress) => {
+        const stageChanged = job.stage !== progress.stage
+        job.status = 'running'
+        job.stage = progress.stage
+        job.progress_percent = progress.progress_percent
+        job.result = progress.result
+        job.coverage = progress.coverage
+        job.limits = progress.limits
+        job.error = null
+        if (
+          !stageChanged &&
+          Date.now() - lastPersistedAt < PROGRESS_DEBOUNCE_MS
+        )
+          return
+        lastPersistedAt = Date.now()
+        await saveJob(job)
+      },
+    })
+  } catch (error) {
+    job.status = 'failed'
+    job.stage = 'finalizing'
+    job.progress_percent = 100
+    job.error = mapError(error)
+    if (job.error === serverError) {
+      console.error('score_job_failed', { job_id: job.job_id, error })
+    }
+    await saveJob(job)
+    return
+  }
+
+  job.status = 'completed'
+  job.stage = 'finalizing'
+  job.progress_percent = 100
+  job.result = scored.result
+  job.coverage = scored.coverage
+  job.limits = scored.limits
+  job.error = null
+  await saveJob(job)
+
+  const now = new Date()
+  await setCachedScore(job.username, scored.result, now, DEFAULT_CACHE_TTL_MS)
+  await upsertLeaderboardEntry({
+    username: job.username,
+    slop_score: scored.result.slop_score,
+    tier: scored.result.tier,
+    tier_tagline: scored.result.tier_tagline,
+    confidence: scored.result.confidence,
+    last_scored_at: now.toISOString(),
+  })
+  await prerenderOgImage(
+    job.username,
+    scored.result,
+    scored.coverage,
+    scored.limits,
+  ).catch((err) =>
+    console.warn('og_prerender_failed', { username: job.username, err }),
+  )
+
+  const durationMs = Date.now() - start
+  recordScoreTiming(durationMs)
+  const p95 = getScoreP95()
+  console.info('score_request', {
+    username: job.username,
+    duration_ms: Math.round(durationMs),
+    p95_ms: p95 ? Math.round(p95) : null,
+    source: 'score_job',
+  })
+}
+
+// Called by the queue consumer when the last delivery attempt failed, so the job does not sit
+// "running" until the stale cutoff. Best effort: the stale rule still covers it if this throws.
+export const failScoreJob = async (jobId: string) => {
+  const row = await db()
+    .prepare(
+      "SELECT snapshot FROM score_jobs WHERE job_id = ? AND status IN ('queued','running')",
+    )
+    .bind(jobId)
+    .first<{ snapshot: string }>()
+  if (!row) return
+  const job = JSON.parse(row.snapshot) as ScoreJobSnapshot
+  job.status = 'failed'
+  job.stage = 'finalizing'
+  job.progress_percent = 100
+  job.error = serverError
+  await saveJob(job)
 }

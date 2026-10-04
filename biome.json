@@ -26,6 +26,14 @@
     "enabled": true
   },
   "files": {
-    "includes": ["**", "!!.next", "!!.test-build", "!!out", "!!build"]
+    "includes": [
+      "**",
+      "!!.next",
+      "!!.test-build",
+      "!!out",
+      "!!build",
+      "!!dist",
+      "!!.wrangler"
+    ]
   }
 }
