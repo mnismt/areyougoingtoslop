@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build for the Next.js (output: 'standalone') app (bun toolchain).
 # Replaces the railpack build (~1.67 GB) with a slim runtime that ships only the
-# standalone server + static assets. Build runs on bun; the standalone output is
-# plain Node, so the runner is a minimal node image.
+# standalone server + static assets. Dependencies use the pinned Bun lockfile;
+# compilation and the standalone server both use Node 22.
 #
 # NEXT_PUBLIC_* vars are inlined at build time and must be supplied as build args
 # via the application's `buildArgs` field (Dokploy does not pass service env as
@@ -17,13 +17,14 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # ---- build ----
-FROM base AS build
+FROM node:22-slim AS build
+WORKDIR /app
 ARG NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN bun run build
+RUN npm run build
 
 # ---- runner ----
 FROM node:22-slim AS runner
